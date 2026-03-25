@@ -11,15 +11,25 @@ namespace MyPaint.Models
     {
         public override void Draw(Graphics g)
         {
-            Pen pen = new Pen(this.Color, this.Thickness);
+            using (Pen pen = new Pen(this.Color, this.Thickness))
+            {
+                int x = Math.Min(StartPoint.X, EndPoint.X);
+                int y = Math.Min(StartPoint.Y, EndPoint.Y);  
+                int width = Math.Abs(EndPoint.X - StartPoint.X);
+                int height = Math.Abs(EndPoint.Y - StartPoint.Y); 
 
-            int x = Math.Min(StartPoint.X, EndPoint.X);
-            int y = Math.Min(StartPoint.X, EndPoint.X);
-            int width = Math.Abs(EndPoint.X - StartPoint.X);
-            int height = Math.Abs(StartPoint.Y - StartPoint.Y);
+                Rectangle rect = new Rectangle(x, y, width, height);
 
-            Rectangle rect = new Rectangle(x, y, width, height);
-            g.DrawRectangle(pen, rect);
+                if (FillColor != Color.Empty && FillColor != Color.Transparent)
+                {
+                    using (SolidBrush brush = new SolidBrush(FillColor))
+                    {
+                        g.FillRectangle(brush, rect);
+                    }
+                }
+
+                g.DrawRectangle(pen, rect);
+            }
         }
 
         public override Shape Clone()
@@ -40,11 +50,31 @@ namespace MyPaint.Models
             int top = Math.Min(StartPoint.Y, EndPoint.Y);
             int bottom = Math.Max(StartPoint.Y, EndPoint.Y);
 
-            if (p.X >= left && p.Y <= right && p.Y >= top && p.Y <= bottom)
+            if (p.X >= left && p.X <= right && p.Y >= top && p.Y <= bottom)
             {
                 return true;
             }
-            return false ;
+
+            const int border = 5;
+            if (Math.Abs(p.X - left) <= border && p.Y >= top && p.Y <= bottom)
+            {
+                return true;
+            }
+            if (Math.Abs(p.X - right) <= border && p.Y >= top && p.Y <= bottom)
+            {
+                return true;
+            }
+            if (Math.Abs(p.Y - top) <= border && p.X >= left && p.X <= right)
+            {
+                return true;
+            }
+            if (Math.Abs(p.Y - bottom) <= border && p.X >= left && p.X <= right)
+            {
+                return true;
+            }
+
+            return false;
+
         }
 
 
@@ -55,17 +85,17 @@ namespace MyPaint.Models
         }
         public override void Resize(float scale)
         {
-            int centerX = (StartPoint.X - EndPoint.X) / 2;
-            int centerY = (StartPoint.Y - EndPoint.Y) / 2;
+            int centerX = (StartPoint.X + EndPoint.X) / 2;
+            int centerY = (StartPoint.Y + EndPoint.Y) / 2;
 
             int halfwidth = Math.Abs(EndPoint.X - StartPoint.X) / 2;
             int halfheight = Math.Abs(EndPoint.Y - StartPoint.Y)/2;
 
-            int newHalfwidth = (int)(halfwidth * scale);
-            int newHalfheigth  = (int)(halfheight * scale);
+            int newHalfWidth = Math.Max(1, (int)(halfwidth * scale));  
+            int newHalfHeight = Math.Max(1, (int)(halfheight * scale)); 
 
-            StartPoint = new Point(centerX - newHalfwidth, centerY - newHalfheigth);
-            EndPoint = new Point(centerX +  newHalfwidth, centerY + newHalfheigth);
+            StartPoint = new Point(centerX - newHalfWidth, centerY - newHalfHeight);
+            EndPoint = new Point(centerX +  newHalfWidth, centerY + newHalfHeight);
 
         }
 

@@ -11,15 +11,25 @@ namespace MyPaint.Models
     {
         public override void Draw(Graphics g)
         {
-            Pen pen = new Pen(this.Color, this.Thickness);
+            using (Pen pen = new Pen(this.Color, this.Thickness))
+            {
+                int x = Math.Min(StartPoint.X, EndPoint.X);
+                int y = Math.Min(StartPoint.Y, EndPoint.Y);
+                int width = Math.Abs(EndPoint.X - StartPoint.X);
+                int height = Math.Abs(EndPoint.Y - StartPoint.Y);
 
-            int x = Math.Min(StartPoint.X, EndPoint.X);
-            int y = Math.Min(StartPoint.X, EndPoint.X);
-            int width = Math.Abs(EndPoint.X - StartPoint.X);
-            int height = Math.Abs(StartPoint.Y - StartPoint.Y);
+                Rectangle rect = new Rectangle(x, y, width, height);
 
-            Rectangle rect = new Rectangle(x, y, width, height);
-            g.DrawEllipse(pen, rect);
+                if (FillColor != Color.Empty && FillColor != Color.Transparent)
+                {
+                    using (SolidBrush brush = new SolidBrush(FillColor))
+                    {
+                        g.FillRectangle(brush, rect);
+                    }
+                }
+
+                g.DrawEllipse(pen, rect);
+            }
         }
 
         public override Shape Clone()
@@ -35,18 +45,37 @@ namespace MyPaint.Models
 
         public override bool ContainPoint(Point p)
         {
-            double lineLength = Math.Sqrt(Math.Pow(EndPoint.X - StartPoint.X, 2) + Math.Pow(EndPoint.Y - StartPoint.Y, 2));
+            int left = Math.Min(StartPoint.X, EndPoint.X);
+            int right = Math.Max(StartPoint.X, EndPoint.X);
+            int top = Math.Min(StartPoint.Y, EndPoint.Y);
+            int bottom = Math.Max(StartPoint.Y, EndPoint.Y);
+            
+            double centerX = (left + right) / 2;
+            double centerY = (top + bottom) / 2;
+            double radX = (right - left) / 2;
+            double radY = (top - bottom) / 2;
 
-            if (lineLength == 0) return false;
+            if (radX == 0 || radY == 0)
+            {
+                return false;
+            }
 
-            double distance = Math.Abs((EndPoint.Y - StartPoint.Y) * p.X - (EndPoint.X - StartPoint.X) * p.Y + EndPoint.X * StartPoint.Y - EndPoint.Y * StartPoint.X) / lineLength;
+            double dx = (p.X - centerX) / radX;
+            double dy = (p.Y - centerY) / radY;
 
-            if (distance > 5.0) return false;
+            double dist = dx * dx + dy * dy;
+            if (dist < 1.0)
+            {
+                return true;
+            }
 
-            double dotProduct = (p.X - StartPoint.X) * (EndPoint.X - StartPoint.X) + (p.Y - StartPoint.Y) * (EndPoint.Y - StartPoint.Y);
-            if (dotProduct < 0 || dotProduct > lineLength * lineLength) return false;
+            if(Math.Abs(dist - 1.0) < 0.1)
+            {
+                return true;
+            }
 
-            return true;
+            return false;
+
         }
 
 
