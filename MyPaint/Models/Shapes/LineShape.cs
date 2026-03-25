@@ -21,6 +21,7 @@ namespace MyPaint.Models.Shapes
             copy.EndPoint = this.EndPoint;
             copy.Thickness = this.Thickness;
             copy.Color = this.Color;
+            copy.FillColor = this.FillColor;
             return copy;
         }
 
