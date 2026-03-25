@@ -6,5 +6,6 @@ namespace MyPaint.Models
 {
     internal class PolygonShape
     {
+        fghjkl
     }
 }
