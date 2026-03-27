@@ -73,8 +73,6 @@ namespace MyPaint.Models
             return Math.Abs(rotatedX) <= width / 2.0 && Math.Abs(rotatedY) <= height / 2.0;
         }
 
-
-
         public override void Move(int x, int y)
         {
             StartPoint = new Point(StartPoint.X + x, StartPoint.Y + y);

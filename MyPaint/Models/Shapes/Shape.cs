@@ -19,7 +19,5 @@ namespace MyPaint.Models.Shapes
         public Point StartPoint { get; set; }
         public Point EndPoint { get; set; }
         public float Angle { get; set; } = 0;
-
-
     }
 }

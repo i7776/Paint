@@ -10,8 +10,10 @@ namespace MyPaint.Models.Shapes
     {
         public override void Draw(Graphics g)
         {
-            Pen pen = new Pen(this.Color, this.Thickness);
-            g.DrawLine(pen, StartPoint, EndPoint);
+            using (Pen pen = new Pen(this.Color, this.Thickness)) 
+            {
+                g.DrawLine(pen, StartPoint, EndPoint);
+            }
         }
 
         public override Shape Clone()

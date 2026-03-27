@@ -11,14 +11,20 @@ namespace MyPaint.Models
     {
         public override void Draw(Graphics g)
         {
+            var state = g.Save();
+
+            int width = Math.Abs(EndPoint.X - StartPoint.X);
+            int height = Math.Abs(EndPoint.Y - StartPoint.Y);
+            int cx = (StartPoint.X + EndPoint.X) / 2;
+            int cy = (StartPoint.Y + EndPoint.Y) / 2;
+
+            g.TranslateTransform(cx, cy);
+            g.RotateTransform(this.Angle);
+
             using (Pen pen = new Pen(this.Color, this.Thickness))
             {
-                int x = Math.Min(StartPoint.X, EndPoint.X);
-                int y = Math.Min(StartPoint.Y, EndPoint.Y);
-                int width = Math.Abs(EndPoint.X - StartPoint.X);
-                int height = Math.Abs(EndPoint.Y - StartPoint.Y);
 
-                Rectangle rect = new Rectangle(x, y, width, height);
+                Rectangle rect = new Rectangle(-width / 2, -height / 2, width, height);
 
                 if (FillColor != Color.Empty && FillColor != Color.Transparent)
                 {
@@ -27,9 +33,9 @@ namespace MyPaint.Models
                         g.FillEllipse(brush, rect);
                     }
                 }
-
                 g.DrawEllipse(pen, rect);
             }
+            g.Restore(state);
         }
 
         public override Shape Clone()
@@ -40,6 +46,7 @@ namespace MyPaint.Models
             copy.Thickness = this.Thickness;
             copy.Color = this.Color;
             copy.FillColor = this.FillColor;
+            copy.Angle = this.Angle;
             return copy;
         }
 
@@ -52,28 +59,25 @@ namespace MyPaint.Models
             
             double centerX = (left + right) / 2;
             double centerY = (top + bottom) / 2;
-            double radX = (right - left) / 2;
-            double radY = (bottom - top) / 2;
 
-            if (radX == 0 || radY == 0)
-            {
-                return false;
-            }
+            double tempX = p.X - centerX;
+            double tempY = p.Y - centerY;
 
-            double dx = (p.X - centerX);
-            double dy = (p.Y - centerY);
-            double dist = (dx * dx) / (radX * radX) + (dy * dy) / (radY * radY);
-            if (dist < 1.0)
-            {
-                return true;
-            }
+            double rad = -this.Angle * Math.PI / 180.0;
 
-            if(Math.Abs(dist - 1.0) < 0.1)
-            {
-                return true;
-            }
+            double rotatedX = tempX * Math.Cos(rad) - tempY * Math.Sin(rad);
+            double rotatedY = tempX * Math.Sin(rad) + tempY * Math.Cos(rad);
 
-            return false;
+            double dx = rotatedX;
+            double dy = rotatedY;
+
+            int width = Math.Abs(EndPoint.X - StartPoint.X);
+            int height = Math.Abs(EndPoint.Y - StartPoint.Y);
+
+            double a = width / 2.0;
+            double b = height / 2.0;
+
+            return (dx * dx) / (a * a) + (dy * dy) / (b * b) <= 1.05;
 
         }
 
@@ -93,16 +97,7 @@ namespace MyPaint.Models
 
         public override void Rotate(float angle, Point center)
         {
-            double rad = angle * Math.PI / 180.0;
-
-            int newStartX = (int)(center.X + (StartPoint.X - center.X) * Math.Cos(rad) - (StartPoint.Y - center.Y) * Math.Sin(rad));
-            int newStartY = (int)(center.Y + (StartPoint.X - center.X) * Math.Sin(rad) + (StartPoint.Y - center.Y) * Math.Cos(rad));
-
-            int newEndX = (int)(center.X + (EndPoint.X - center.X) * Math.Cos(rad) - (EndPoint.Y - center.Y) * Math.Sin(rad));
-            int newEndY = (int)(center.Y + (EndPoint.X - center.X) * Math.Sin(rad) + (EndPoint.Y - center.Y) * Math.Cos(rad));
-
-            StartPoint = new Point(newStartX, newStartY);
-            EndPoint = new Point(newEndX, newEndY);
+            this.Angle += angle;
         }
     }
 }
