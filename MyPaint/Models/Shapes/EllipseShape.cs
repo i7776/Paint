@@ -24,7 +24,7 @@ namespace MyPaint.Models
                 {
                     using (SolidBrush brush = new SolidBrush(FillColor))
                     {
-                        g.FillRectangle(brush, rect);
+                        g.FillEllipse(brush, rect);
                     }
                 }
 
@@ -53,17 +53,16 @@ namespace MyPaint.Models
             double centerX = (left + right) / 2;
             double centerY = (top + bottom) / 2;
             double radX = (right - left) / 2;
-            double radY = (top - bottom) / 2;
+            double radY = (bottom - top) / 2;
 
             if (radX == 0 || radY == 0)
             {
                 return false;
             }
 
-            double dx = (p.X - centerX) / radX;
-            double dy = (p.Y - centerY) / radY;
-
-            double dist = dx * dx + dy * dy;
+            double dx = (p.X - centerX);
+            double dy = (p.Y - centerY);
+            double dist = (dx * dx) / (radX * radX) + (dy * dy) / (radY * radY);
             if (dist < 1.0)
             {
                 return true;
