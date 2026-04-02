@@ -7,7 +7,7 @@ using System.Text;
 
 namespace MyPaint.Models
 {
-    class EllipseShape : Shape
+    public class EllipseShape : Shape
     {
         public override void Draw(Graphics g)
         {

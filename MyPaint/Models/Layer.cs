@@ -1,7 +1,7 @@
 ﻿using MyPaint.Models.Shapes;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Drawing; 
 
 namespace MyPaint.Models
 {
@@ -13,15 +13,23 @@ namespace MyPaint.Models
         public bool IsLocked { get; set; }
         public List<Shape> Shapes { get; set; }
 
-        public Layer() 
+        public Layer(int id, string name)
         {
-            Id = Id;
-            Name = Name;
+            Id = id;
+            Name = name;
             IsVisible = true;
             IsLocked = false;
             Shapes = new List<Shape>();
         }
 
-        
+        public void Draw(Graphics g)
+        {
+            if (!IsVisible) return; 
+
+            foreach (var shape in Shapes)
+            {
+                shape.Draw(g);
+            }
+        }
     }
 }

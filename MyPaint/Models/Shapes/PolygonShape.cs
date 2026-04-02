@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace MyPaint.Models.Shapes
 {
-    class PolygonShape : Shape
+    public class PolygonShape : Shape
     {
         public List<Point> Points {  get; set; } = new List<Point>();
         public override void Draw(Graphics g)

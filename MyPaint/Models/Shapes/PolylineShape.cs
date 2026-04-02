@@ -5,7 +5,7 @@ using System.Drawing;
 
 namespace MyPaint.Models.Shapes
 {
-    class PolylineShape : Shape
+    public class PolylineShape : Shape
     {
 
         public List<Point> Points { get; set; } = new List<Point>();

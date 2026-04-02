@@ -5,7 +5,7 @@ using System.Text;
 
 namespace MyPaint.Models.Shapes
 {
-    abstract class Shape
+    public abstract class Shape
     {
         public abstract void Draw(Graphics g);
         public abstract bool ContainPoint(Point p);

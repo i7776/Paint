@@ -7,7 +7,7 @@ using System.Text;
 
 namespace MyPaint.Models
 {
-    class RectangleShape : Shape
+    public class RectangleShape : Shape
     {
         public override void Draw(Graphics g)
         {

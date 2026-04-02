@@ -6,7 +6,7 @@ using System.Text;
 
 namespace MyPaint.Models.Shapes
 {
-    class LineShape : Shape
+    public class LineShape : Shape
     {
         public override void Draw(Graphics g)
         {
