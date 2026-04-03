@@ -25,7 +25,31 @@
             <Button Content="📐" Height="40" Margin="5" Click="Tool_Click" Tag="Polygon" ToolTip="Многоугольник"/>
             <Separator Margin="5" Background="#666"/>
             <Button Content="🗑️" Height="40" Margin="5" Click="Delete_Click" ToolTip="Удалить (Del)"/>
+
+            <Label Content="Цвет: " FontWeight="Bold" Foreground="White"/>
+            <UniformGrid Columns="4" x:Name="ColorPalette">
+                <Button Background="Black" Tag="Black" Click="Color_Click" Height="25" Margin="2"/>
+                <Button Background="Red" Tag="Red" Click="Color_Click" Height="25" Margin="2"/>
+                <Button Background="Green" Tag="Green" Click="Color_Click" Height="25" Margin="2"/>
+                <Button Background="Blue" Tag="Blue" Click="Color_Click" Height="25" Margin="2"/>
+                <Button Background="Yellow" Tag="Yellow" Click="Color_Click" Height="25" Margin="2"/>
+                <Button Background="Orange" Tag="Orange" Click="Color_Click" Height="25" Margin="2"/>
+                <Button Background="White" Tag="White" Click="Color_Click" Height="25" Margin="2"/>
+                <Button Background="Gray" Tag="Gray" Click="Color_Click" Height="25" Margin="2"/>
+            </UniformGrid>
+            <Button Content="Другой ..." Margin="0,5,0,0" Click="MoreColors_Click"/>
+            <Rectangle x:Name="CurrentColorRect" Height="10" Fill="Black" Margin="0,5,0,0"/>
+
+            <Separator Margin="5" Background="#666"/>
+            <Label Content="Толщ:" Foreground="White" HorizontalAlignment="Center" Padding="0"/>
+            <TextBlock Text="{Binding ElementName=ThicknessSlider, Path=Value}" Foreground="White" HorizontalAlignment="Center" FontWeight="Bold"/>
+
+            <Slider x:Name="ThicknessSlider" Minimum="1" Maximum="30" Value="2" TickFrequency="1" IsSnapToTickEnabled="True" 
+        Margin="5,0"   ValueChanged="ThicknessSlider_ValueChanged"/>
         </StackPanel>
+
+        
+
 
         <!-- ЦЕНТРАЛЬНЫЙ ХОЛСТ -->
         <Border Grid.Column="1" Background="White" Margin="10" ClipToBounds="True">
@@ -35,7 +59,8 @@
                    VerticalAlignment="Top"
                    MouseDown="Canvas_MouseDown"
                    MouseMove="Canvas_MouseMove"
-                   MouseUp="Canvas_MouseUp"/>
+                   MouseUp="Canvas_MouseUp"
+                   MouseRightButtonDown="Canvas_MouseRightButtonDown" />
         </Border>
 
         <!-- ПРАВАЯ ПАНЕЛЬ (СЛОИ) -->
@@ -59,6 +84,8 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
                 </ListBox>
+            
+            
 
 
                 <Button Grid.Row="2" Content="Добавить слой" Margin="5" Padding="5" Click="AddLayer_Click"/>

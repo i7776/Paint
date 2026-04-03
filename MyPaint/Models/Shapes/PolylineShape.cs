@@ -32,14 +32,11 @@ namespace MyPaint.Models.Shapes
             return copy;
         }
 
-        public override void Move(int x, int y)
+        public override void Move(int dx, int dy)
         {
-            for (int  i =0;  i < Points.Count; i++)
+            for (int i = 0; i < Points.Count; i++)
             {
-                Point p = Points[i];
-                p.X += x;
-                p.Y += y;
-                Points[i] = p;
+                Points[i] = new Point(Points[i].X + dx, Points[i].Y + dy);
             }
         }
 
