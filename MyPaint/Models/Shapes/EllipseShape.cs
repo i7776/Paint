@@ -20,21 +20,21 @@ namespace MyPaint.Models
 
             g.TranslateTransform(cx, cy);
             g.RotateTransform(this.Angle);
+            Rectangle rect = new Rectangle(-width / 2, -height / 2, width, height);
 
-            using (Pen pen = new Pen(this.Color, this.Thickness))
+            if (FillColor.A > 0)
             {
-
-                Rectangle rect = new Rectangle(-width / 2, -height / 2, width, height);
-
-                if (FillColor != Color.Empty && FillColor != Color.Transparent)
+                using (var brush = new SolidBrush(FillColor))
                 {
-                    using (SolidBrush brush = new SolidBrush(FillColor))
-                    {
-                        g.FillEllipse(brush, rect);
-                    }
+                    g.FillEllipse(brush, rect);
                 }
+            }
+
+            using (var pen = new Pen(Color, Thickness))
+            {
                 g.DrawEllipse(pen, rect);
             }
+
             g.Restore(state);
         }
 

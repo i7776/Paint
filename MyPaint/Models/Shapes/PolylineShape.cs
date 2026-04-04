@@ -11,16 +11,28 @@ namespace MyPaint.Models.Shapes
         public List<Point> Points { get; set; } = new List<Point>();
         public override void Draw(Graphics g)
         {
-            if (Points.Count < 2)
-            { 
-               return;
+            if (Points.Count < 2) return;
+
+            var oldMode = g.SmoothingMode;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            if (FillColor.A > 0 && Points.Count > 2)
+            {
+                using (var brush = new SolidBrush(FillColor))
+                {
+                    g.FillPolygon(brush, Points.ToArray());
+                }
             }
 
-            using (Pen pen = new Pen(this.Color, this.Thickness))
+            using (var pen = new Pen(Color, Thickness))
             {
+                pen.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
                 g.DrawLines(pen, Points.ToArray());
             }
+
+            g.SmoothingMode = oldMode;
         }
+
 
         public override Shape Clone()
         {
@@ -28,6 +40,7 @@ namespace MyPaint.Models.Shapes
             copy.Points = new List<Point>(this.Points);
             copy.Color = this.Color;
             copy.Thickness = this.Thickness;
+            copy.FillColor = this.FillColor;
             copy.Angle = this.Angle;
             return copy;
         }
@@ -42,25 +55,27 @@ namespace MyPaint.Models.Shapes
 
         public override bool ContainPoint(Point p)
         {
-            for (int i = 1; i < Points.Count; i++)
+            if (Points.Count < 2) return false;
+
+            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
             {
-                Point p1 = Points[i - 1];
-                Point p2 = Points[i];
+                // Добавляем все линии в путь
+                path.AddLines(Points.ToArray());
 
-                double lineLength = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
-                if (lineLength == 0) continue;
-
-                double distance = Math.Abs((p2.Y - p1.Y) * p.X - (p2.X - p1.X) * p.Y + p2.X * p1.Y - p2.Y * p1.X) / lineLength;
-
-                if (distance <= 5.0) 
+                // 1. Проверка попадания в закрашенную область
+                if (FillColor.A > 0)
                 {
-                    double dotProduct = (p.X - p1.X) * (p2.X - p1.X) + (p.Y - p1.Y) * (p2.Y - p1.Y);
-                    if (dotProduct >= 0 && dotProduct <= lineLength * lineLength)
-                        return true;
+                    if (path.IsVisible(p)) return true;
+                }
+
+                using (var pen = new Pen(Color, Thickness + 5))
+                {
+                    if (path.IsOutlineVisible(p, pen)) return true;
                 }
             }
             return false;
         }
+
 
 
         public override void Resize(float scale)

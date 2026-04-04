@@ -19,6 +19,7 @@ namespace MyPaint
         private Shape? _tempShape;
         private System.Drawing.Point _lastMousePos;
         private System.Drawing.Color _currColor  = System.Drawing.Color.Black;
+        private System.Drawing.Color _currFillColor = System.Drawing.Color.Transparent;
         private int _currThickness = 2;
         
 
@@ -42,16 +43,29 @@ namespace MyPaint
             {
                 using (Graphics g = Graphics.FromImage(bmp))
                 {
-                    g.Clear(Color.White);
-                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-
-                    // рисуем проект 
-                    _project.Draw(g);
-
-                    if (_project.ActiveLayer != null && _project.ActiveLayer.IsVisible)
+                    if (_project.Layers.Count == 0) 
                     {
-                        _tempShape?.Draw(g);
+                        g.Clear(Color.DarkGray);
+                        using (Font font = new Font("Arial", 16))
+                        {
+                            g.DrawString("Создайте слой, чтобы начать рисовать",
+                                         font, Brushes.White, new PointF(width / 4, height / 2));
+                        }
                     }
+                    else
+                    {
+                        g.Clear(Color.White);
+                        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                        // рисуем проект 
+                        _project.Draw(g);
+
+                        if (_project.ActiveLayer != null && _project.ActiveLayer.IsVisible)
+                        {
+                            _tempShape?.Draw(g);
+                        }
+                    }
+                    CanvasImage.Source = BitmapToImageSource(bmp);
                 }
 
                 // вывод на экран
@@ -90,6 +104,15 @@ namespace MyPaint
 
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            if(_project.ActiveLayer == null)
+            {
+                return;
+            }
+
+            if (!_project.ActiveLayer.IsVisible) 
+            {
+                return;
+            }
 
             if (e.LeftButton != MouseButtonState.Pressed)
             {
@@ -102,6 +125,20 @@ namespace MyPaint
             if (_currentTool == "Select")
             {
                 _selectedShape = _project.GetShapeAt(drawingPoint);
+
+                if (_selectedShape != null)
+                {
+                    // Обновляем текущие цвета в палитре, чтобы они соответствовали выбранной фигуре
+                    _currColor = _selectedShape.Color;
+                    _currFillColor = _selectedShape.FillColor;
+                    _currThickness = _selectedShape.Thickness;
+
+                    // Обновляем визуальные индикаторы в UI
+                    CurrentColorRect.Fill = new System.Windows.Media.SolidColorBrush(
+                        System.Windows.Media.Color.FromArgb(_currColor.A, _currColor.R, _currColor.G, _currColor.B));
+                    ThicknessSlider.Value = _currThickness;
+                    UpdateFillIndicator();
+                }
             }
             else if (_currentTool == "Polyline" || _currentTool == "Polygon")
             {
@@ -276,7 +313,7 @@ namespace MyPaint
                 s.EndPoint = start;
                 s.Color = _currColor;
                 s.Thickness = _currThickness;
-                s.FillColor = System.Drawing.Color.Transparent;
+                s.FillColor = _currFillColor;
             }
             return s;
         }
@@ -335,6 +372,70 @@ namespace MyPaint
         {
             if (e.Key == Key.Delete) Delete_Click(this, new RoutedEventArgs());
         }
+
+        private void DeleteLayer_Click(object sender, RoutedEventArgs e)
+        {
+            if (LayersList.SelectedItem is Layer selectedLayer)
+            {
+                if (_project.Layers.Count <= 1)
+                {
+                    System.Windows.MessageBox.Show("Нельзя удалить последний слой!", "Внимание",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                _project.Layers.Remove(selectedLayer);
+
+                if (_project.ActiveLayer == selectedLayer)
+                {
+                    _project.ActiveLayer = _project.Layers.Count > 0 ? _project.Layers[0] : null;
+                }
+
+                UpdateLayersList();
+                Render();
+            }
+        }
+
+        private void SetFillColor_Click(object sender, RoutedEventArgs e)
+        {
+            _currFillColor = _currColor; 
+            UpdateFillIndicator();
+        }
+
+        private void ClearFill_Click(object sender, RoutedEventArgs e)
+        {
+            _currFillColor = System.Drawing.Color.Transparent;
+            UpdateFillIndicator();
+        }
+
+        private void UpdateFillIndicator()
+        {
+            if (_currFillColor == System.Drawing.Color.Transparent)
+            {
+                CurrentFillRect.Fill = System.Windows.Media.Brushes.Transparent;
+                FillStatusText.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                CurrentFillRect.Fill = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromArgb(_currFillColor.A, _currFillColor.R, _currFillColor.G, _currFillColor.B));
+                FillStatusText.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void ApplyFillToSelected_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedShape != null)
+            {
+                _selectedShape.FillColor = _currFillColor;
+                Render(); // Перерисовываем холст
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Сначала выберите фигуру инструментом 'Выделение' (мышка)");
+            }
+        }
+
         #endregion
     }
 }

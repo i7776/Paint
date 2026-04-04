@@ -12,24 +12,22 @@ namespace MyPaint.Models.Shapes
         public List<Point> Points {  get; set; } = new List<Point>();
         public override void Draw(Graphics g)
         {
-            if (Points.Count < 3)
+            if (Points.Count < 2) return;
+
+            if (FillColor.A > 0 && Points.Count > 2)
             {
-                return;
+                using (var brush = new SolidBrush(FillColor))
+                {
+                    g.FillPolygon(brush, Points.ToArray());
+                }
             }
 
-            using (Pen pen = new Pen(this.Color, this.Thickness))
+            using (var pen = new Pen(Color, Thickness))
             {
-                if (FillColor != Color.Empty && FillColor != Color.Transparent)
-                {
-                    using (SolidBrush brush = new SolidBrush(FillColor))
-                    {
-                        g.FillPolygon(brush, Points.ToArray());
-                    }
-                }
-
                 g.DrawPolygon(pen, Points.ToArray());
             }
         }
+
         public override Shape Clone()
         {
             PolygonShape copy = new PolygonShape();

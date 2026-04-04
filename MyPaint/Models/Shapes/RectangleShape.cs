@@ -23,14 +23,17 @@ namespace MyPaint.Models
 
             Rectangle rect = new Rectangle(-width / 2, -height / 2, width, height);
 
+            if (FillColor.A > 0) 
+            {
+                using (var brush = new SolidBrush(FillColor))
+                {
+                    g.FillRectangle(brush, rect);
+                }
+            }
+
             using (Pen pen = new Pen(this.Color, this.Thickness))
             {
-                if (FillColor != Color.Empty)
-                {
-                    using (SolidBrush brush = new SolidBrush(FillColor))
-                        g.FillRectangle(brush, rect);
-                }
-                g.DrawRectangle(pen, rect);
+               g.DrawRectangle(pen, rect);
             }
 
             g.Restore(state); 
