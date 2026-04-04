@@ -1,7 +1,7 @@
 ﻿<Window x:Class="MyPaint.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MyPaint" Height="700" Width="900"
+        Title="MyPaint" Height="600" Width="800"
         KeyDown="Window_KeyDown"
         Background="#333">
 

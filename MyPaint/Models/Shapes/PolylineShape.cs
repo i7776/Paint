@@ -113,5 +113,67 @@ namespace MyPaint.Models.Shapes
             }
         }
 
+        public override Rectangle GetBounds()
+        {
+            if (Points == null || Points.Count == 0)
+                return new Rectangle(StartPoint.X, StartPoint.Y, 0, 0);
+
+            int minX = int.MaxValue;
+            int minY = int.MaxValue;
+            int maxX = int.MinValue;
+            int maxY = int.MinValue;
+
+            foreach (var p in Points)
+            {
+                if (p.X < minX) minX = p.X;
+                if (p.Y < minY) minY = p.Y;
+                if (p.X > maxX) maxX = p.X;
+                if (p.Y > maxY) maxY = p.Y;
+            }
+
+            int padding = 5;
+            return new Rectangle(minX - padding, minY - padding, (maxX - minX) + padding * 2, (maxY - minY) + padding * 2);
+        }
+
+        public void ResizeByMouse(System.Drawing.Point anchor, System.Drawing.Point mousePos, List<System.Drawing.Point> originalPoints)
+        {
+            if (originalPoints == null || originalPoints.Count == 0) return;
+
+            // 1. Находим границы ОРИГИНАЛЬНОЙ фигуры, чтобы понять масштаб
+            int minX = originalPoints.Min(p => p.X);
+            int maxX = originalPoints.Max(p => p.X);
+            int minY = originalPoints.Min(p => p.Y);
+            int maxY = originalPoints.Max(p => p.Y);
+
+            float oldWidth = maxX - minX;
+            float oldHeight = maxY - minY;
+
+            // Защита от деления на ноль (если фигура - точка)
+            if (oldWidth == 0) oldWidth = 1;
+            if (oldHeight == 0) oldHeight = 1;
+
+            // 2. Считаем коэффициенты масштабирования по X и Y
+            float scaleX = (float)Math.Abs(mousePos.X - anchor.X) / oldWidth;
+            float scaleY = (float)Math.Abs(mousePos.Y - anchor.Y) / oldHeight;
+
+            // 3. Определяем направление (тянем ли мы в плюс или в минус от якоря)
+            int dirX = mousePos.X >= anchor.X ? 1 : -1;
+            int dirY = mousePos.Y >= anchor.Y ? 1 : -1;
+
+            // 4. Пересчитываем каждую точку
+            for (int i = 0; i < originalPoints.Count; i++)
+            {
+                // Расстояние от якоря до оригинальной точки
+                float distOriginX = Math.Abs(originalPoints[i].X - anchor.X);
+                float distOriginY = Math.Abs(originalPoints[i].Y - anchor.Y);
+
+                // Новая позиция = Якорь + (Смещение * Масштаб * Направление)
+                int newX = anchor.X + (int)(distOriginX * scaleX) * dirX;
+                int newY = anchor.Y + (int)(distOriginY * scaleY) * dirY;
+
+                this.Points[i] = new System.Drawing.Point(newX, newY);
+            }
+        }
+
     }
 }

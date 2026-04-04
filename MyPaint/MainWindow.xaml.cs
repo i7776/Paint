@@ -6,7 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input; // для событий мыши WPF
+using System.Windows.Input; 
 using System.Windows.Media.Imaging;
 
 namespace MyPaint
@@ -14,14 +14,19 @@ namespace MyPaint
     public partial class MainWindow : Window
     {
         private DrawingProject _project;
-        private string _currentTool = "Select";
+        private string _currTool = "Select";
         private Shape? _selectedShape;
         private Shape? _tempShape;
         private System.Drawing.Point _lastMousePos;
         private System.Drawing.Color _currColor  = System.Drawing.Color.Black;
         private System.Drawing.Color _currFillColor = System.Drawing.Color.Transparent;
         private int _currThickness = 2;
-        
+        private bool _isResizing = false;
+        private int _resizeIndex = -1;
+        private bool _isRotating = false;
+        private System.Drawing.Point _resizeAnchorPoint;
+        private List<System.Drawing.Point> _originalPoints; // копия точек до начала ресайза
+
 
         public MainWindow()
         {
@@ -33,63 +38,7 @@ namespace MyPaint
             this.Loaded += (s, e) => Render();
         }
 
-        #region Отрисовка
-        private void Render()
-        {
-            int width = (int)Math.Max(CanvasImage.ActualWidth, 800);
-            int height = (int)Math.Max(CanvasImage.ActualHeight, 600);
-
-            using (Bitmap bmp = new Bitmap(width, height))
-            {
-                using (Graphics g = Graphics.FromImage(bmp))
-                {
-                    if (_project.Layers.Count == 0) 
-                    {
-                        g.Clear(Color.DarkGray);
-                        using (Font font = new Font("Arial", 16))
-                        {
-                            g.DrawString("Создайте слой, чтобы начать рисовать",
-                                         font, Brushes.White, new PointF(width / 4, height / 2));
-                        }
-                    }
-                    else
-                    {
-                        g.Clear(Color.White);
-                        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-
-                        // рисуем проект 
-                        _project.Draw(g);
-
-                        if (_project.ActiveLayer != null && _project.ActiveLayer.IsVisible)
-                        {
-                            _tempShape?.Draw(g);
-                        }
-                    }
-                    CanvasImage.Source = BitmapToImageSource(bmp);
-                }
-
-                // вывод на экран
-                CanvasImage.Source = BitmapToImageSource(bmp);
-            }
-        }
-
-        private BitmapSource BitmapToImageSource(Bitmap bitmap)
-        {
-            using (MemoryStream memory = new MemoryStream())
-            {
-                bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Bmp);
-                memory.Position = 0;
-                BitmapImage bitmapImage = new BitmapImage();
-                bitmapImage.BeginInit();
-                bitmapImage.StreamSource = memory;
-                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                bitmapImage.EndInit();
-                return bitmapImage;
-            }
-        }
-        #endregion
-
-        #region Мышь (Логика рисования под твои классы)
+        #region Мышь 
 
         private bool _isDrawingPoly = false; // флаг для многоточечного рисования
 
@@ -99,6 +48,15 @@ namespace MyPaint
             if (LayersList.SelectedItem is Layer selectedLayer)
             {
                 _project.ActiveLayer = selectedLayer;
+            }
+        }
+
+        //удалить
+        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Delete || e.Key == Key.Back)
+            {
+                Delete_Click(this, new RoutedEventArgs());
             }
         }
 
@@ -118,34 +76,86 @@ namespace MyPaint
             {
                 return;
             }
+
             var p = e.GetPosition(CanvasImage);
             var drawingPoint = new System.Drawing.Point((int)p.X, (int)p.Y);
             _lastMousePos = drawingPoint;
 
-            if (_currentTool == "Select")
+            if (_currTool == "Select")
             {
+                if (_selectedShape != null) 
+                {
+                    System.Drawing.Rectangle bounds = _selectedShape.GetBounds();
+                    int s = 6;
+
+                    System.Drawing.Point[] handles = new System.Drawing.Point[]
+                    {
+                        new System.Drawing.Point(bounds.X, bounds.Y),
+                        new System.Drawing.Point(bounds.Right, bounds.Y),
+                        new System.Drawing.Point(bounds.X, bounds.Bottom),
+                        new System.Drawing.Point(bounds.Right, bounds.Bottom)
+                    };
+
+                    _isResizing = false;
+                    _resizeIndex = -1;
+
+                    for (int i = 0; i < handles.Length; i++)
+                    {
+                        System.Drawing.Rectangle handleRect = new System.Drawing.Rectangle(handles[i].X - s / 2, handles[i].Y - s / 2, s, s);
+
+                        if (handleRect.Contains(drawingPoint))
+                        {
+                            _isResizing = true;
+                            _resizeIndex = i;
+                            int xMin = Math.Min(_selectedShape.StartPoint.X, _selectedShape.EndPoint.X);
+                            int yMin = Math.Min(_selectedShape.StartPoint.Y, _selectedShape.EndPoint.Y);
+                            int xMax = Math.Max(_selectedShape.StartPoint.X, _selectedShape.EndPoint.X);
+                            int yMax = Math.Max(_selectedShape.StartPoint.Y, _selectedShape.EndPoint.Y);
+
+                            if (i == 0) _resizeAnchorPoint = new System.Drawing.Point(xMax, yMax); // Тянем топ-лево -> якорь право-низ
+                            if (i == 1) _resizeAnchorPoint = new System.Drawing.Point(xMin, yMax); // Тянем топ-право -> якорь лево-низ
+                            if (i == 2) _resizeAnchorPoint = new System.Drawing.Point(xMax, yMin); // Тянем низ-лево -> якорь право-топ
+                            if (i == 3) _resizeAnchorPoint = new System.Drawing.Point(xMin, yMin); // Тянем низ-право -> якорь лево-топ   // Тянем низ-право, якорь: лево-топ
+
+                            if (_selectedShape is PolygonShape pg)
+                            {
+                                _originalPoints = pg.Points.Select(pt => new System.Drawing.Point(pt.X, pt.Y)).ToList();
+                            }
+                            else if (_selectedShape is PolylineShape pl)
+                            {
+                                _originalPoints = pl.Points.Select(pt => new System.Drawing.Point(pt.X, pt.Y)).ToList();
+                            }
+
+                            break; 
+                        }
+                    }
+                    if (_isResizing)
+                    {
+                        return;
+                    }
+
+                }
                 _selectedShape = _project.GetShapeAt(drawingPoint);
 
                 if (_selectedShape != null)
                 {
-                    // Обновляем текущие цвета в палитре, чтобы они соответствовали выбранной фигуре
+                    // обновляем текущие цвета в палитре, чтобы они соответствовали выбранной фигуре
                     _currColor = _selectedShape.Color;
                     _currFillColor = _selectedShape.FillColor;
                     _currThickness = _selectedShape.Thickness;
 
                     // Обновляем визуальные индикаторы в UI
-                    CurrentColorRect.Fill = new System.Windows.Media.SolidColorBrush(
-                        System.Windows.Media.Color.FromArgb(_currColor.A, _currColor.R, _currColor.G, _currColor.B));
+                    CurrentColorRect.Fill = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(_currColor.A, _currColor.R, _currColor.G, _currColor.B));
                     ThicknessSlider.Value = _currThickness;
                     UpdateFillIndicator();
                 }
             }
-            else if (_currentTool == "Polyline" || _currentTool == "Polygon")
+            else if (_currTool == "Polyline" || _currTool == "Polygon")
             {
-                if (!_isDrawingPoly) // первый клик
+                if (!_isDrawingPoly) 
                 {
                     _isDrawingPoly = true;
-                    _tempShape = CreateShape(_currentTool, drawingPoint);
+                    _tempShape = CreateShape(_currTool, drawingPoint);
 
                     // инициализируем список и добавляем 2 точки: 
                     // одна зафиксирована, вторая будет следовать за мышью
@@ -166,7 +176,7 @@ namespace MyPaint
             }
             else 
             {
-                _tempShape = CreateShape(_currentTool, drawingPoint);
+                _tempShape = CreateShape(_currTool, drawingPoint);
             }
             Render();
         }
@@ -178,7 +188,7 @@ namespace MyPaint
             if (e.ChangedButton != MouseButton.Left) return;
 
             // если это ломаная/многоугольник — НЕ завершаем рисование по MouseUp
-            if (_currentTool == "Polyline" || _currentTool == "Polygon") return;
+            if (_currTool == "Polyline" || _currTool == "Polygon") return;
 
             if (_tempShape != null)
             {
@@ -195,9 +205,13 @@ namespace MyPaint
             {
                 // удаляем последнюю точку, которая просто следовала за курсором
                 if (_tempShape is PolylineShape poly && poly.Points.Count > 1)
+                {
                     poly.Points.RemoveAt(poly.Points.Count - 1);
+                }   
                 else if (_tempShape is PolygonShape pg && pg.Points.Count > 1)
+                {
                     pg.Points.RemoveAt(pg.Points.Count - 1);
+                }
 
                 // добавляем в активный слой
                 _project.ActiveLayer?.Shapes.Add(_tempShape);
@@ -236,12 +250,36 @@ namespace MyPaint
             // логика для обычных фигур и выделения (нужна зажатая кнопка)
             if (e.LeftButton == MouseButtonState.Pressed)
             {
-                if (_currentTool == "Select" && _selectedShape != null)
+                if (_currTool == "Select" && _selectedShape != null)
                 {
-                    int dx = currentPoint.X - _lastMousePos.X;
-                    int dy = currentPoint.Y - _lastMousePos.Y;
-                    _selectedShape.Move(dx, dy);
-                    _lastMousePos = currentPoint;
+                    if (_isResizing)
+                    {
+                        if (_selectedShape is PolygonShape poly)
+                        {
+                            poly.ResizeByMouse(_resizeAnchorPoint, currentPoint, _originalPoints);
+                        }
+                        else if (_selectedShape is PolylineShape line)
+                        {
+                            line.ResizeByMouse(_resizeAnchorPoint, currentPoint, _originalPoints);
+                        }
+                        else
+                        {
+                            // Для обычных фигур (Rectangle, Ellipse, Line)
+                            // Мы просто привязываем один угол к якорю, а второй к мышке
+                            _selectedShape.StartPoint = _resizeAnchorPoint;
+                            _selectedShape.EndPoint = currentPoint;
+                        }
+                        Render();
+
+                    }
+                    else
+                    {
+                        // Обычное перемещение
+                        int dx = currentPoint.X - _lastMousePos.X;
+                        int dy = currentPoint.Y - _lastMousePos.Y;
+                        _selectedShape.Move(dx, dy);
+                        _lastMousePos = currentPoint;
+                    }
                 }
                 else if (_tempShape != null)
                 {
@@ -251,6 +289,7 @@ namespace MyPaint
             }
         }
 
+        
         #endregion
 
         #region Вспомогательное
@@ -265,7 +304,7 @@ namespace MyPaint
 
                 CurrentColorRect.Fill = button.Background;
 
-                if (_currentTool == "Select" && _selectedShape != null)
+                if (_currTool == "Select" && _selectedShape != null)
                 {
                     _selectedShape.Color = _currColor; 
                     Render(); 
@@ -274,7 +313,7 @@ namespace MyPaint
         }
 
 
-        // Выбор произвольного цвета через системное окно
+        // выбор произвольного цвета через системное окно
         private void MoreColors_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new System.Windows.Forms.ColorDialog();
@@ -283,11 +322,11 @@ namespace MyPaint
                 var c = dialog.Color;
                 _currColor = System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
 
-                // Обновляем предпросмотр
+                // обновляем предпросмотр
                 CurrentColorRect.Fill = new System.Windows.Media.SolidColorBrush(
                     System.Windows.Media.Color.FromArgb(c.A, c.R, c.G, c.B));
 
-                if (_currentTool == "Select" && _selectedShape != null)
+                if (_currTool == "Select" && _selectedShape != null)
                 {
                     _selectedShape.Color = _currColor;
                     Render();
@@ -318,22 +357,11 @@ namespace MyPaint
             return s;
         }
 
+        // переключение элементов
         private void Tool_Click(object sender, RoutedEventArgs e)
         {
-            _currentTool = (string)((FrameworkElement)sender).Tag;
+            _currTool = (string)((FrameworkElement)sender).Tag;
             _selectedShape = null;
-        }
-
-        private void UpdateLayersList()
-        {
-            var currentActive = _project.ActiveLayer;
-
-            // обновляем список
-            LayersList.ItemsSource = null;
-            LayersList.ItemsSource = _project.Layers;
-
-            // возвращаем выделение в списке
-            LayersList.SelectedItem = currentActive;
         }
 
         private void AddLayer_Click(object sender, RoutedEventArgs e)
@@ -351,7 +379,7 @@ namespace MyPaint
         {
             _currThickness = (int)e.NewValue;
 
-            if (_currentTool == "Select" && _selectedShape != null)
+            if (_currTool == "Select" && _selectedShape != null)
             {
                 _selectedShape.Thickness = _currThickness;
                 Render();
@@ -368,10 +396,6 @@ namespace MyPaint
             }
         }
 
-        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            if (e.Key == Key.Delete) Delete_Click(this, new RoutedEventArgs());
-        }
 
         private void DeleteLayer_Click(object sender, RoutedEventArgs e)
         {
@@ -428,7 +452,7 @@ namespace MyPaint
             if (_selectedShape != null)
             {
                 _selectedShape.FillColor = _currFillColor;
-                Render(); // Перерисовываем холст
+                Render(); 
             }
             else
             {
