@@ -26,6 +26,9 @@ namespace MyPaint
         private bool _isRotating = false;
         private System.Drawing.Point _resizeAnchorPoint;
         private List<System.Drawing.Point> _originalPoints; // копия точек до начала ресайза
+        private float _startResizeDistX;
+        private float _startResizeDistY;
+
 
 
         public MainWindow()
@@ -87,6 +90,19 @@ namespace MyPaint
                 {
                     System.Drawing.Rectangle bounds = _selectedShape.GetBounds();
                     int s = 6;
+                    int handleSize = 8; 
+                    int offset = 20;
+
+                    int rotX = bounds.X + bounds.Width / 2;
+                    int rotY = bounds.Y - offset;
+                    System.Drawing.Rectangle rotRect = new System.Drawing.Rectangle(rotX - handleSize / 2, rotY - handleSize / 2, handleSize, handleSize);
+
+                    if (rotRect.Contains(drawingPoint))
+                    {
+                        _isRotating = true; 
+                        _isResizing = false;
+                        return; 
+                    }
 
                     System.Drawing.Point[] handles = new System.Drawing.Point[]
                     {
@@ -107,15 +123,14 @@ namespace MyPaint
                         {
                             _isResizing = true;
                             _resizeIndex = i;
-                            int xMin = Math.Min(_selectedShape.StartPoint.X, _selectedShape.EndPoint.X);
-                            int yMin = Math.Min(_selectedShape.StartPoint.Y, _selectedShape.EndPoint.Y);
-                            int xMax = Math.Max(_selectedShape.StartPoint.X, _selectedShape.EndPoint.X);
-                            int yMax = Math.Max(_selectedShape.StartPoint.Y, _selectedShape.EndPoint.Y);
+                            if (i == 0) _resizeAnchorPoint = new System.Drawing.Point(bounds.Right, bounds.Bottom);
+                            if (i == 1) _resizeAnchorPoint = new System.Drawing.Point(bounds.X, bounds.Bottom);
+                            if (i == 2) _resizeAnchorPoint = new System.Drawing.Point(bounds.Right, bounds.Y);
+                            if (i == 3) _resizeAnchorPoint = new System.Drawing.Point(bounds.X, bounds.Y);
 
-                            if (i == 0) _resizeAnchorPoint = new System.Drawing.Point(xMax, yMax); // Тянем топ-лево -> якорь право-низ
-                            if (i == 1) _resizeAnchorPoint = new System.Drawing.Point(xMin, yMax); // Тянем топ-право -> якорь лево-низ
-                            if (i == 2) _resizeAnchorPoint = new System.Drawing.Point(xMax, yMin); // Тянем низ-лево -> якорь право-топ
-                            if (i == 3) _resizeAnchorPoint = new System.Drawing.Point(xMin, yMin); // Тянем низ-право -> якорь лево-топ   // Тянем низ-право, якорь: лево-топ
+                            _startResizeDistX = (float)(drawingPoint.X - _resizeAnchorPoint.X);
+                            _startResizeDistY = (float)(drawingPoint.Y - _resizeAnchorPoint.Y);
+
 
                             if (_selectedShape is PolygonShape pg)
                             {

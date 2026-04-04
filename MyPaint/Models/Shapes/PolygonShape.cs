@@ -147,7 +147,7 @@ namespace MyPaint.Models.Shapes
         {
             if (originalPoints == null || originalPoints.Count == 0) return;
 
-            // 1. Находим границы ОРИГИНАЛЬНОЙ фигуры, чтобы понять масштаб
+            // находим границы фигуры
             int minX = originalPoints.Min(p => p.X);
             int maxX = originalPoints.Max(p => p.X);
             int minY = originalPoints.Min(p => p.Y);
@@ -156,33 +156,29 @@ namespace MyPaint.Models.Shapes
             float oldWidth = maxX - minX;
             float oldHeight = maxY - minY;
 
-            // Защита от деления на ноль (если фигура - точка)
             if (oldWidth == 0) oldWidth = 1;
             if (oldHeight == 0) oldHeight = 1;
 
-            // 2. Считаем коэффициенты масштабирования по X и Y
+            // считаем коэффициенты масштабирования 
             float scaleX = (float)Math.Abs(mousePos.X - anchor.X) / oldWidth;
             float scaleY = (float)Math.Abs(mousePos.Y - anchor.Y) / oldHeight;
 
-            // 3. Определяем направление (тянем ли мы в плюс или в минус от якоря)
+            // направление 
             int dirX = mousePos.X >= anchor.X ? 1 : -1;
             int dirY = mousePos.Y >= anchor.Y ? 1 : -1;
 
-            // 4. Пересчитываем каждую точку
             for (int i = 0; i < originalPoints.Count; i++)
             {
-                // Расстояние от якоря до оригинальной точки
+                // расстояние от якоря до оригинальной точки
                 float distOriginX = Math.Abs(originalPoints[i].X - anchor.X);
                 float distOriginY = Math.Abs(originalPoints[i].Y - anchor.Y);
 
-                // Новая позиция = Якорь + (Смещение * Масштаб * Направление)
+                // новая позиция
                 int newX = anchor.X + (int)(distOriginX * scaleX) * dirX;
                 int newY = anchor.Y + (int)(distOriginY * scaleY) * dirY;
 
                 this.Points[i] = new System.Drawing.Point(newX, newY);
             }
         }
-
-
     }
 }

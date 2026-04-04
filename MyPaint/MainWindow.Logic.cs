@@ -66,6 +66,20 @@ namespace MyPaint
                                     g.DrawRectangle(Pens.DodgerBlue, hp.X - s / 2, hp.Y - s / 2, s, s);
                                 }
                             }
+
+                            int d = 8;
+                            using (Brush handleBrush = new SolidBrush(Color.White))
+                            {
+                                int topCenX = bounds.X + bounds.Width / 2;
+                                int topCenY = bounds.Y;
+
+                                int rotX = topCenX;
+                                int rotY = topCenY - 20;
+
+                                g.DrawLine(Pens.DodgerBlue, topCenX, topCenY, rotX, rotY);
+                                g.FillEllipse(handleBrush, rotX - d / 2, rotY - d / 2, d, d);
+                                g.DrawEllipse(Pens.DodgerBlue, rotX - d / 2, rotY - d / 2, d, d);
+                            }
                         }
                     }
                 }
