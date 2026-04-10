@@ -10,11 +10,22 @@ namespace MyPaint.Models.Shapes
     {
         public override void Draw(Graphics g)
         {
-            using (Pen pen = new Pen(this.Color, this.Thickness)) 
+            var state = g.Save();
+            Rectangle b = GetBounds();
+            int cx = b.X + b.Width / 2;
+            int cy = b.Y + b.Height / 2;
+
+            g.TranslateTransform(cx, cy);
+            g.RotateTransform(this.Angle);
+
+            using (Pen pen = new Pen(this.Color, this.Thickness))
             {
-                g.DrawLine(pen, StartPoint, EndPoint);
+                // Рисуем координаты относительно центра
+                g.DrawLine(pen, StartPoint.X - cx, StartPoint.Y - cy, EndPoint.X - cx, EndPoint.Y - cy);
             }
+            g.Restore(state);
         }
+
 
         public override Shape Clone()
         {
@@ -76,7 +87,8 @@ namespace MyPaint.Models.Shapes
             int y = Math.Min(StartPoint.Y, EndPoint.Y);
             int w = Math.Abs(StartPoint.X - EndPoint.X);
             int h = Math.Abs(StartPoint.Y - EndPoint.Y);
-            return new Rectangle(x - 5, y - 5, w + 10, h + 10); // +10 для запаса
+            return new Rectangle(x, y, Math.Max(w, 1), Math.Max(h, 1));
         }
+
     }
 }

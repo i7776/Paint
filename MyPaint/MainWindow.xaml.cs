@@ -26,8 +26,9 @@ namespace MyPaint
         private bool _isRotating = false;
         private System.Drawing.Point _resizeAnchorPoint;
         private List<System.Drawing.Point> _originalPoints; // копия точек до начала ресайза
-        private float _startResizeDistX;
-        private float _startResizeDistY;
+        private System.Drawing.Point _originalStart; // Для прямоугольников/эллипсов
+        private System.Drawing.Point _originalEnd;
+
 
 
 
@@ -88,65 +89,61 @@ namespace MyPaint
             {
                 if (_selectedShape != null) 
                 {
-                    System.Drawing.Rectangle bounds = _selectedShape.GetBounds();
-                    int s = 6;
-                    int handleSize = 8; 
+                    // Внутри Canvas_MouseDown, в блоке if (_selectedShape != null)
+                    Rectangle bounds = _selectedShape.GetBounds();
+                    int cx = bounds.X + bounds.Width / 2;
+                    int cy = bounds.Y + bounds.Height / 2;
+                    var center = new System.Drawing.Point(cx, cy);
+
+                    // ВАЖНО: Вращаем точку мыши ОБРАТНО углу фигуры
+                    var localMouse = RotatePoint(drawingPoint, center, -_selectedShape.Angle);
+
+                    // Теперь проверяем попадание, используя localMouse и ОБЫЧНЫЕ bounds (без поворота)
+                    int s = 8;
                     int offset = 20;
 
-                    int rotX = bounds.X + bounds.Width / 2;
-                    int rotY = bounds.Y - offset;
-                    System.Drawing.Rectangle rotRect = new System.Drawing.Rectangle(rotX - handleSize / 2, rotY - handleSize / 2, handleSize, handleSize);
-
-                    if (rotRect.Contains(drawingPoint))
+                    // Проверка маркера вращения
+                    Rectangle rotRect = new Rectangle(cx - s / 2, bounds.Y - offset, s, s);
+                    // Так как rotRect мы считали в мировых координатах, а localMouse в локальных, 
+                    // проще проверить маркер вращения так:
+                    if (new Rectangle(-s / 2, -bounds.Height / 2 - offset, s, s).Contains(localMouse.X - cx, localMouse.Y - cy))
                     {
-                        _isRotating = true; 
-                        _isResizing = false;
-                        return; 
+                        _isRotating = true;
+                        return;
                     }
 
-                    System.Drawing.Point[] handles = new System.Drawing.Point[]
-                    {
-                        new System.Drawing.Point(bounds.X, bounds.Y),
-                        new System.Drawing.Point(bounds.Right, bounds.Y),
-                        new System.Drawing.Point(bounds.X, bounds.Bottom),
-                        new System.Drawing.Point(bounds.Right, bounds.Bottom)
-                    };
-
-                    _isResizing = false;
-                    _resizeIndex = -1;
+                    // Маркеры ресайза (теперь проверяем относительно localMouse)
+                    System.Drawing.Point[] handles = new System.Drawing.Point[] {
+    new System.Drawing.Point(bounds.X, bounds.Y),
+    new System.Drawing.Point(bounds.Right, bounds.Y),
+    new System.Drawing.Point(bounds.X, bounds.Bottom),
+    new System.Drawing.Point(bounds.Right, bounds.Bottom)
+};
 
                     for (int i = 0; i < handles.Length; i++)
                     {
-                        System.Drawing.Rectangle handleRect = new System.Drawing.Rectangle(handles[i].X - s / 2, handles[i].Y - s / 2, s, s);
-
-                        if (handleRect.Contains(drawingPoint))
+                        if (new Rectangle(handles[i].X - s, handles[i].Y - s, s * 2, s * 2).Contains(localMouse))
                         {
                             _isResizing = true;
                             _resizeIndex = i;
+
+                            // Сохраняем исходные данные фигуры ПЕРЕД началом изменения
+                            _originalStart = _selectedShape.StartPoint;
+                            _originalEnd = _selectedShape.EndPoint;
+
+                            // Назначаем якорь (точка, которая ДОЛЖНА стоять на месте на экране)
                             if (i == 0) _resizeAnchorPoint = new System.Drawing.Point(bounds.Right, bounds.Bottom);
                             if (i == 1) _resizeAnchorPoint = new System.Drawing.Point(bounds.X, bounds.Bottom);
                             if (i == 2) _resizeAnchorPoint = new System.Drawing.Point(bounds.Right, bounds.Y);
                             if (i == 3) _resizeAnchorPoint = new System.Drawing.Point(bounds.X, bounds.Y);
 
-                            _startResizeDistX = (float)(drawingPoint.X - _resizeAnchorPoint.X);
-                            _startResizeDistY = (float)(drawingPoint.Y - _resizeAnchorPoint.Y);
+                            if (_selectedShape is PolygonShape pg) _originalPoints = pg.Points.ToList();
+                            else if (_selectedShape is PolylineShape pl) _originalPoints = pl.Points.ToList();
 
-
-                            if (_selectedShape is PolygonShape pg)
-                            {
-                                _originalPoints = pg.Points.Select(pt => new System.Drawing.Point(pt.X, pt.Y)).ToList();
-                            }
-                            else if (_selectedShape is PolylineShape pl)
-                            {
-                                _originalPoints = pl.Points.Select(pt => new System.Drawing.Point(pt.X, pt.Y)).ToList();
-                            }
-
-                            break; 
+                            return;
                         }
-                    }
-                    if (_isResizing)
-                    {
-                        return;
+
+
                     }
 
                 }
@@ -201,6 +198,10 @@ namespace MyPaint
         private void Canvas_MouseUp(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton != MouseButton.Left) return;
+
+            _isResizing = false; // Сбрасываем
+            _isRotating = false; // Сбрасываем
+            _resizeIndex = -1;
 
             // если это ломаная/многоугольник — НЕ завершаем рисование по MouseUp
             if (_currTool == "Polyline" || _currTool == "Polygon") return;
@@ -267,25 +268,78 @@ namespace MyPaint
             {
                 if (_currTool == "Select" && _selectedShape != null)
                 {
+                    // В MainWindow.Logic.cs (или где у вас MouseMove)
+
                     if (_isResizing)
                     {
+                        // 1. Получаем текущие границы и центр ДО изменения
+                        Rectangle oldBounds = _selectedShape.GetBounds();
+                        System.Drawing.Point oldCenter = new System.Drawing.Point(
+                            oldBounds.X + oldBounds.Width / 2,
+                            oldBounds.Y + oldBounds.Height / 2
+                        );
+
+                        // 2. Находим, где ЯКОРЬ находится на экране СЕЙЧАС (с учетом текущего поворота)
+                        System.Drawing.Point worldAnchorBefore = RotatePoint(_resizeAnchorPoint, oldCenter, _selectedShape.Angle);
+
+                        // 3. Переводим мышь из экранных координат в локальные (отменяем поворот)
+                        var localMouse = RotatePoint(currentPoint, oldCenter, -_selectedShape.Angle);
+
+                        // 4. ПРИМЕНЯЕМ РЕЗАЙЗ
                         if (_selectedShape is PolygonShape poly)
                         {
-                            poly.ResizeByMouse(_resizeAnchorPoint, currentPoint, _originalPoints);
+                            poly.ResizeByMouse(_resizeAnchorPoint, localMouse, _originalPoints);
                         }
                         else if (_selectedShape is PolylineShape line)
                         {
-                            line.ResizeByMouse(_resizeAnchorPoint, currentPoint, _originalPoints);
+                            line.ResizeByMouse(_resizeAnchorPoint, localMouse, _originalPoints);
                         }
                         else
                         {
-                            // Для обычных фигур (Rectangle, Ellipse, Line)
-                            // Мы просто привязываем один угол к якорю, а второй к мышке
+                            // Для Rectangle/Ellipse: якорь - это один угол, мышь - другой
                             _selectedShape.StartPoint = _resizeAnchorPoint;
-                            _selectedShape.EndPoint = currentPoint;
+                            _selectedShape.EndPoint = localMouse;
                         }
-                        Render();
 
+                        // 5. МАГИЯ КОМПЕНСАЦИИ:
+                        // После ресайза центр фигуры изменился. Нам нужно найти новый центр.
+                        Rectangle newBounds = _selectedShape.GetBounds();
+                        System.Drawing.Point newCenter = new System.Drawing.Point(
+                            newBounds.X + newBounds.Width / 2,
+                            newBounds.Y + newBounds.Height / 2
+                        );
+
+                        // Где наш неподвижный якорь оказался БЫ на экране при новом центре?
+                        System.Drawing.Point worldAnchorAfter = RotatePoint(_resizeAnchorPoint, newCenter, _selectedShape.Angle);
+
+                        // Насколько якорь "уплыл" из-за смены центра?
+                        int dx = worldAnchorBefore.X - worldAnchorAfter.X;
+                        int dy = worldAnchorBefore.Y - worldAnchorAfter.Y;
+
+                        // Двигаем фигуру на это расстояние, чтобы вернуть якорь в исходную точку на экране
+                        _selectedShape.Move(dx, dy);
+
+                        Render();
+                    }
+
+
+
+                    else if (_isRotating) // Добавляем этот блок
+                    {
+                        var bounds = _selectedShape.GetBounds();
+                        // Центр фигуры
+                        var center = new System.Drawing.Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
+
+                        // Вычисляем угол в радианах между центром и мышкой
+                        double radians = Math.Atan2(currentPoint.Y - center.Y, currentPoint.X - center.X);
+                        // Переводим в градусы
+                        double degrees = radians * (180.0 / Math.PI);
+
+                        // Так как маркер ("антенна") находится сверху, а Atan2 считает от оси X (вправо),
+                        // нам нужно сместить результат на 90 градусов, чтобы 0 был наверху.
+                        _selectedShape.Angle = (float)degrees + 90;
+
+                        Render();
                     }
                     else
                     {

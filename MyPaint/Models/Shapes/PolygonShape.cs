@@ -14,19 +14,34 @@ namespace MyPaint.Models.Shapes
         {
             if (Points.Count < 2) return;
 
-            if (FillColor.A > 0 && Points.Count > 2)
+            var state = g.Save();
+            Rectangle b = GetBounds();
+            int cx = b.X + b.Width / 2;
+            int cy = b.Y + b.Height / 2;
+
+            g.TranslateTransform(cx, cy);
+            g.RotateTransform(this.Angle);
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            // Пересчитываем точки относительно центра (0,0)
+            var relativePoints = Points.Select(p => new System.Drawing.Point(p.X - cx, p.Y - cy)).ToArray();
+
+            if (FillColor.A > 0 && this is PolygonShape)
             {
                 using (var brush = new SolidBrush(FillColor))
-                {
-                    g.FillPolygon(brush, Points.ToArray());
-                }
+                    g.FillPolygon(brush, relativePoints);
             }
 
             using (var pen = new Pen(Color, Thickness))
             {
-                g.DrawPolygon(pen, Points.ToArray());
+                pen.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
+                if (this is PolygonShape) g.DrawPolygon(pen, relativePoints);
+                else g.DrawLines(pen, relativePoints);
             }
+            g.Restore(state);
         }
+
+
 
         public override Shape Clone()
         {
@@ -123,62 +138,46 @@ namespace MyPaint.Models.Shapes
 
         public override Rectangle GetBounds()
         {
-            if (Points == null || Points.Count == 0)
-                return new Rectangle(StartPoint.X, StartPoint.Y, 0, 0);
-
-            int minX = int.MaxValue;
-            int minY = int.MaxValue;
-            int maxX = int.MinValue;
-            int maxY = int.MinValue;
-
-            foreach (var p in Points)
-            {
-                if (p.X < minX) minX = p.X;
-                if (p.Y < minY) minY = p.Y;
-                if (p.X > maxX) maxX = p.X;
-                if (p.Y > maxY) maxY = p.Y;
-            }
-
-            int padding = 5;
-            return new Rectangle(minX - padding, minY - padding, (maxX - minX) + padding * 2,(maxY - minY) + padding * 2);
+            if (Points == null || Points.Count == 0) return new Rectangle(0, 0, 0, 0);
+            int minX = Points.Min(p => p.X);
+            int minY = Points.Min(p => p.Y);
+            int maxX = Points.Max(p => p.X);
+            int maxY = Points.Max(p => p.Y);
+            // Никаких +5 или +10 здесь!
+            return new Rectangle(minX, minY, Math.Max(1, maxX - minX), Math.Max(1, maxY - minY));
         }
 
-        public void ResizeByMouse(System.Drawing.Point anchor, System.Drawing.Point mousePos, List<System.Drawing.Point> originalPoints)
+        public void ResizeByMouse(Point anchor, Point mouse, List<Point> originalPoints)
         {
             if (originalPoints == null || originalPoints.Count == 0) return;
 
-            // находим границы фигуры
+            // Находим границы того состояния, которое было в момент нажатия мыши
             int minX = originalPoints.Min(p => p.X);
-            int maxX = originalPoints.Max(p => p.X);
             int minY = originalPoints.Min(p => p.Y);
+            int maxX = originalPoints.Max(p => p.X);
             int maxY = originalPoints.Max(p => p.Y);
+            int oldW = Math.Max(1, maxX - minX);
+            int oldH = Math.Max(1, maxY - minY);
 
-            float oldWidth = maxX - minX;
-            float oldHeight = maxY - minY;
+            // Текущие размеры рамки ресайза
+            int newLeft = Math.Min(anchor.X, mouse.X);
+            int newTop = Math.Min(anchor.Y, mouse.Y);
+            int newWidth = Math.Max(1, Math.Abs(mouse.X - anchor.X));
+            int newHeight = Math.Max(1, Math.Abs(mouse.Y - anchor.Y));
 
-            if (oldWidth == 0) oldWidth = 1;
-            if (oldHeight == 0) oldHeight = 1;
-
-            // считаем коэффициенты масштабирования 
-            float scaleX = (float)Math.Abs(mousePos.X - anchor.X) / oldWidth;
-            float scaleY = (float)Math.Abs(mousePos.Y - anchor.Y) / oldHeight;
-
-            // направление 
-            int dirX = mousePos.X >= anchor.X ? 1 : -1;
-            int dirY = mousePos.Y >= anchor.Y ? 1 : -1;
-
-            for (int i = 0; i < originalPoints.Count; i++)
+            for (int i = 0; i < Points.Count; i++)
             {
-                // расстояние от якоря до оригинальной точки
-                float distOriginX = Math.Abs(originalPoints[i].X - anchor.X);
-                float distOriginY = Math.Abs(originalPoints[i].Y - anchor.Y);
+                // Вычисляем процентное положение точки в старой рамке (от 0.0 до 1.0)
+                float pctX = (float)(originalPoints[i].X - minX) / oldW;
+                float pctY = (float)(originalPoints[i].Y - minY) / oldH;
 
-                // новая позиция
-                int newX = anchor.X + (int)(distOriginX * scaleX) * dirX;
-                int newY = anchor.Y + (int)(distOriginY * scaleY) * dirY;
+                // Переносим этот процент в новую рамку
+                int nx = (int)(newLeft + pctX * newWidth);
+                int ny = (int)(newTop + pctY * newHeight); // Теперь переменная объявлена!
 
-                this.Points[i] = new System.Drawing.Point(newX, newY);
+                Points[i] = new Point(nx, ny);
             }
         }
+
     }
 }

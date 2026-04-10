@@ -104,12 +104,11 @@ namespace MyPaint.Models
         {
             int x = Math.Min(StartPoint.X, EndPoint.X);
             int y = Math.Min(StartPoint.Y, EndPoint.Y);
-
-            int w = Math.Abs(EndPoint.X - StartPoint.X);
-            int h = Math.Abs(EndPoint.Y - StartPoint.Y);
-
-            return new Rectangle(x - 5, y - 5, w + 10, h + 10); // +10 для запаса
+            int w = Math.Abs(StartPoint.X - EndPoint.X);
+            int h = Math.Abs(StartPoint.Y - EndPoint.Y);
+            return new Rectangle(x, y, Math.Max(w, 1), Math.Max(h, 1));
         }
+
 
     }
 }

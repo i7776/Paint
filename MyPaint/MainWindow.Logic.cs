@@ -42,45 +42,52 @@ namespace MyPaint
                         if (_currTool == "Select" && _selectedShape != null)
                         {
                             Rectangle bounds = _selectedShape.GetBounds();
+                            var state = g.Save();
+
+                            // Центр для вращения рамки
+                            int cx = bounds.X + bounds.Width / 2;
+                            int cy = bounds.Y + bounds.Height / 2;
+
+                            g.TranslateTransform(cx, cy);
+                            g.RotateTransform(_selectedShape.Angle);
+
+                            // Рисуем всё относительно центра (0,0)
+                            int halfW = bounds.Width / 2;
+                            int halfH = bounds.Height / 2;
+                            Rectangle localRect = new Rectangle(-halfW, -halfH, bounds.Width, bounds.Height);
 
                             using (Pen framePen = new Pen(Color.Blue, 1))
                             {
                                 framePen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
-                                g.DrawRectangle(framePen, bounds);
+                                g.DrawRectangle(framePen, localRect);
                             }
 
-                            // квадратики для изменения размера
-                            int s = 6; // размер квадратика
-                            using (Brush handleBrush = new SolidBrush(Color.White))
+                            // Рисуем маркеры ресайза
+                            int s = 6;
+                            Point[] handles = new Point[] {
+        new Point(localRect.Left, localRect.Top),     // 0
+        new Point(localRect.Right, localRect.Top),    // 1
+        new Point(localRect.Left, localRect.Bottom),  // 2
+        new Point(localRect.Right, localRect.Bottom)  // 3
+    };
+
+                            foreach (var hp in handles)
                             {
-                                Point[] handles = new Point[] {
-                                    new Point(bounds.X, bounds.Y),
-                                    new Point(bounds.Right, bounds.Y),
-                                    new Point(bounds.X, bounds.Bottom),
-                                    new Point(bounds.Right, bounds.Bottom)};
-
-                                // рисование квадратика
-                                foreach (var hp in handles)
-                                {
-                                    g.FillRectangle(handleBrush, hp.X - s / 2, hp.Y - s / 2, s, s);
-                                    g.DrawRectangle(Pens.DodgerBlue, hp.X - s / 2, hp.Y - s / 2, s, s);
-                                }
+                                g.FillRectangle(Brushes.White, hp.X - s / 2, hp.Y - s / 2, s, s);
+                                g.DrawRectangle(Pens.DodgerBlue, hp.X - s / 2, hp.Y - s / 2, s, s);
                             }
 
+                            // Маркер вращения ("антенна")
                             int d = 8;
-                            using (Brush handleBrush = new SolidBrush(Color.White))
-                            {
-                                int topCenX = bounds.X + bounds.Width / 2;
-                                int topCenY = bounds.Y;
+                            int rotX = 0; // центр по X
+                            int rotY = -halfH - 20;
+                            g.DrawLine(Pens.DodgerBlue, 0, -halfH, rotX, rotY);
+                            g.FillEllipse(Brushes.White, rotX - d / 2, rotY - d / 2, d, d);
+                            g.DrawEllipse(Pens.DodgerBlue, rotX - d / 2, rotY - d / 2, d, d);
 
-                                int rotX = topCenX;
-                                int rotY = topCenY - 20;
-
-                                g.DrawLine(Pens.DodgerBlue, topCenX, topCenY, rotX, rotY);
-                                g.FillEllipse(handleBrush, rotX - d / 2, rotY - d / 2, d, d);
-                                g.DrawEllipse(Pens.DodgerBlue, rotX - d / 2, rotY - d / 2, d, d);
-                            }
+                            g.Restore(state);
                         }
+
                     }
                 }
 
@@ -88,6 +95,20 @@ namespace MyPaint
                 CanvasImage.Source = BitmapToImageSource(bmp);
             }
         }
+
+        private System.Drawing.Point RotatePoint(System.Drawing.Point p, System.Drawing.Point center, float angle)
+        {
+            double rad = angle * Math.PI / 180.0;
+            double cos = Math.Cos(rad);
+            double sin = Math.Sin(rad);
+            int dx = p.X - center.X;
+            int dy = p.Y - center.Y;
+            return new System.Drawing.Point(
+                (int)(center.X + dx * cos - dy * sin),
+                (int)(center.Y + dx * sin + dy * cos)
+            );
+        }
+
 
         private BitmapSource BitmapToImageSource(Bitmap bitmap)
         {
