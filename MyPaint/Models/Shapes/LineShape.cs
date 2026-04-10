@@ -20,7 +20,6 @@ namespace MyPaint.Models.Shapes
 
             using (Pen pen = new Pen(this.Color, this.Thickness))
             {
-                // Рисуем координаты относительно центра
                 g.DrawLine(pen, StartPoint.X - cx, StartPoint.Y - cy, EndPoint.X - cx, EndPoint.Y - cy);
             }
             g.Restore(state);

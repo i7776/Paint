@@ -58,7 +58,6 @@ namespace MyPaint.Models
             float cx = (StartPoint.X + EndPoint.X) / 2f;
             float cy = (StartPoint.Y + EndPoint.Y) / 2f;
 
-            // переводим угол в радианы и делаем его ОТРИЦАТЕЛЬНЫМ
             double rad = -this.Angle * Math.PI / 180.0;
 
             // вращаем точку клика p вокруг центра cx, cy в обратную сторону
@@ -68,11 +67,11 @@ namespace MyPaint.Models
             double rotatedX = tempX * Math.Cos(rad) - tempY * Math.Sin(rad);
             double rotatedY = tempX * Math.Sin(rad) + tempY * Math.Cos(rad);
 
-            // используем твою обычную логику проверки границ
+            // логикф проверки границ
             int width = Math.Abs(EndPoint.X - StartPoint.X);
             int height = Math.Abs(EndPoint.Y - StartPoint.Y);
 
-            // точка в границы прямоугольника относительно его центра
+            // точка в границы относительно его центра
             return Math.Abs(rotatedX) <= width / 2.0 && Math.Abs(rotatedY) <= height / 2.0;
         }
 

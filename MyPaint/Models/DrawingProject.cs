@@ -71,5 +71,26 @@ namespace MyPaint.Models
                 }
             }
         }
+
+        public void MoveLayerUp(Layer layer)
+        {
+            int index = Layers.IndexOf(layer);
+            if (index > 0) 
+            {
+                Layers.RemoveAt(index);
+                Layers.Insert(index - 1, layer);
+            }
+        }
+
+        public void MoveLayerDown(Layer layer)
+        {
+            int index = Layers.IndexOf(layer);
+            if (index < Layers.Count - 1)
+            {
+                Layers.RemoveAt(index);
+                Layers.Insert(index + 1, layer);
+            }
+        }
+
     }
 }

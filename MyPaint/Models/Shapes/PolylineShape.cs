@@ -22,7 +22,7 @@ namespace MyPaint.Models.Shapes
             g.RotateTransform(this.Angle);
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-            // Пересчитываем точки относительно центра (0,0)
+            // пересчитываем точки относительно центра
             var relativePoints = Points.Select(p => new System.Drawing.Point(p.X - cx, p.Y - cy)).ToArray();
 
             if (FillColor.A > 0 && this is PolygonShape)
@@ -65,10 +65,7 @@ namespace MyPaint.Models.Shapes
 
             using (var path = new System.Drawing.Drawing2D.GraphicsPath())
             {
-                // Добавляем все линии в путь
                 path.AddLines(Points.ToArray());
-
-                // 1. Проверка попадания в закрашенную область
                 if (FillColor.A > 0)
                 {
                     if (path.IsVisible(p)) return true;
@@ -119,7 +116,6 @@ namespace MyPaint.Models.Shapes
             }
         }
 
-        // Вставьте в PolylineShape.cs
         public override Rectangle GetBounds()
         {
             if (Points == null || Points.Count == 0) return new Rectangle(0, 0, 0, 0);
@@ -127,7 +123,6 @@ namespace MyPaint.Models.Shapes
             int minY = Points.Min(p => p.Y);
             int maxX = Points.Max(p => p.X);
             int maxY = Points.Max(p => p.Y);
-            // Никаких +5 или +10 здесь!
             return new Rectangle(minX, minY, Math.Max(1, maxX - minX), Math.Max(1, maxY - minY));
         }
 

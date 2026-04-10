@@ -44,14 +44,14 @@ namespace MyPaint
                             Rectangle bounds = _selectedShape.GetBounds();
                             var state = g.Save();
 
-                            // Центр для вращения рамки
+                            // центр для вращения рамки
                             int cx = bounds.X + bounds.Width / 2;
                             int cy = bounds.Y + bounds.Height / 2;
 
                             g.TranslateTransform(cx, cy);
                             g.RotateTransform(_selectedShape.Angle);
 
-                            // Рисуем всё относительно центра (0,0)
+                            // рисуем относительно центра
                             int halfW = bounds.Width / 2;
                             int halfH = bounds.Height / 2;
                             Rectangle localRect = new Rectangle(-halfW, -halfH, bounds.Width, bounds.Height);
@@ -62,14 +62,14 @@ namespace MyPaint
                                 g.DrawRectangle(framePen, localRect);
                             }
 
-                            // Рисуем маркеры ресайза
+                            // квадратики ресайза
                             int s = 6;
                             Point[] handles = new Point[] {
-        new Point(localRect.Left, localRect.Top),     // 0
-        new Point(localRect.Right, localRect.Top),    // 1
-        new Point(localRect.Left, localRect.Bottom),  // 2
-        new Point(localRect.Right, localRect.Bottom)  // 3
-    };
+                                new Point(localRect.Left, localRect.Top),     
+                                new Point(localRect.Right, localRect.Top),    
+                                new Point(localRect.Left, localRect.Bottom),  
+                                new Point(localRect.Right, localRect.Bottom)  
+                            };
 
                             foreach (var hp in handles)
                             {
@@ -77,7 +77,7 @@ namespace MyPaint
                                 g.DrawRectangle(Pens.DodgerBlue, hp.X - s / 2, hp.Y - s / 2, s, s);
                             }
 
-                            // Маркер вращения ("антенна")
+                            // антенна для вращения
                             int d = 8;
                             int rotX = 0; // центр по X
                             int rotY = -halfH - 20;

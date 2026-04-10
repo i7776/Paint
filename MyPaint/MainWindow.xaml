@@ -17,50 +17,62 @@
 
         <!-- ЛЕВАЯ ПАНЕЛЬ -->
         <StackPanel Grid.Column="0" Background="#444">
-            <Button Content="🖱️" Height="40" Margin="5" Click="Tool_Click" Tag="Select" ToolTip="Выделение"/>
-            <Button Content="📏" Height="40" Margin="5" Click="Tool_Click" Tag="Line" ToolTip="Линия"/>
-            <Button Content="〰️" Height="40" Margin="5" Click="Tool_Click" Tag="Polyline" ToolTip="Ломаная"/>
-            <Button Content="⬜" Height="40" Margin="5" Click="Tool_Click" Tag="Rect" ToolTip="Прямоугольник"/>
-            <Button Content="⚪" Height="40" Margin="5" Click="Tool_Click" Tag="Ellipse" ToolTip="Эллипс"/>
-            <Button Content="📐" Height="40" Margin="5" Click="Tool_Click" Tag="Polygon" ToolTip="Многоугольник"/>
+            <!-- Добавляем Focusable="False" всем кнопкам инструментов -->
+            <Button Content="🖱️" Height="40" Margin="5" Click="Tool_Click" Tag="Select" Focusable="False" ToolTip="Выделение"/>
+            <Button Content="📏" Height="40" Margin="5" Click="Tool_Click" Tag="Line" Focusable="False" ToolTip="Линия"/>
+            <Button Content="〰️" Height="40" Margin="5" Click="Tool_Click" Tag="Polyline" Focusable="False" ToolTip="Ломаная"/>
+            <Button Content="⬜" Height="40" Margin="5" Click="Tool_Click" Tag="Rect" Focusable="False" ToolTip="Прямоугольник"/>
+            <Button Content="⚪" Height="40" Margin="5" Click="Tool_Click" Tag="Ellipse" Focusable="False" ToolTip="Эллипс"/>
+            <Button Content="📐" Height="40" Margin="5" Click="Tool_Click" Tag="Polygon" Focusable="False" ToolTip="Многоугольник"/>
+
             <Separator Margin="5" Background="#666"/>
-            <Button Content="🗑️" Height="40" Margin="5" Click="Delete_Click" ToolTip="Удалить (Del)"/>
+            <Button Content="🗑️" Height="40" Margin="5" Click="Delete_Click" Focusable="False" ToolTip="Удалить (Del)"/>
 
             <Label Content="Цвет: " FontWeight="Bold" Foreground="White"/>
             <UniformGrid Columns="4" x:Name="ColorPalette">
-                <Button Background="Black" Tag="Black" Click="Color_Click" Height="25" Margin="2"/>
-                <Button Background="Red" Tag="Red" Click="Color_Click" Height="25" Margin="2"/>
-                <Button Background="Green" Tag="Green" Click="Color_Click" Height="25" Margin="2"/>
-                <Button Background="Blue" Tag="Blue" Click="Color_Click" Height="25" Margin="2"/>
-                <Button Background="Yellow" Tag="Yellow" Click="Color_Click" Height="25" Margin="2"/>
-                <Button Background="Orange" Tag="Orange" Click="Color_Click" Height="25" Margin="2"/>
-                <Button Background="White" Tag="White" Click="Color_Click" Height="25" Margin="2"/>
-                <Button Background="Gray" Tag="Gray" Click="Color_Click" Height="25" Margin="2"/>
+                <!-- Кнопкам палитры тоже Focusable="False" -->
+                <Button Background="Black" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                <Button Background="Red" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                <Button Background="Green" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                <Button Background="Blue" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                <Button Background="Yellow" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                <Button Background="Orange" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                <Button Background="White" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                <Button Background="Gray" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
             </UniformGrid>
-            <Button Content="Другой ..." Margin="0,5,0,0" Click="MoreColors_Click"/>
-            <Rectangle x:Name="CurrentColorRect" Height="10" Fill="Black" Margin="0,5,0,0"/>
+
+            <Button Content="Другой ..." Margin="0,5,0,0" Click="MoreColors_Click" Focusable="False"/>
+
+            <!-- СЕКЦИЯ ВЫБОРА: ЧТО МЫ КРАСИМ? -->
+            <Label Content="Режим:" Foreground="White" Margin="0,10,0,0"/>
+            <Grid Margin="5">
+                <StackPanel>
+                    <!-- Рамка вокруг индикатора будет показывать, что выбрано -->
+                    <Border x:Name="StrokeColorBorder" BorderBrush="Yellow" BorderThickness="2" Margin="2">
+                        <Rectangle x:Name="CurrentColorRect" Height="20" Fill="Black" MouseDown="CurrentColorRect_MouseDown" Cursor="Hand"/>
+                    </Border>
+                    <TextBlock Text="Контур" Foreground="Gray" FontSize="10" HorizontalAlignment="Center"/>
+
+                    <Border x:Name="FillColorBorder" BorderBrush="Transparent" BorderThickness="2" Margin="2">
+                        <Grid MouseDown="CurrentFillRect_MouseDown" Cursor="Hand">
+                            <Rectangle x:Name="CurrentFillRect" Height="20" Fill="Transparent" Stroke="White" StrokeDashArray="2 2"/>
+                            <TextBlock x:Name="FillStatusText" Text="Прозрачно" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" IsHitTestVisible="False"/>
+                        </Grid>
+                    </Border>
+                    <TextBlock Text="Заливка" Foreground="Gray" FontSize="10" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
 
             <Separator Margin="5" Background="#666"/>
             <Label Content="Толщ:" Foreground="White" HorizontalAlignment="Center" Padding="0"/>
             <TextBlock Text="{Binding ElementName=ThicknessSlider, Path=Value}" Foreground="White" HorizontalAlignment="Center" FontWeight="Bold"/>
 
-            <Slider x:Name="ThicknessSlider" Minimum="1" Maximum="30" Value="2" TickFrequency="1" IsSnapToTickEnabled="True" 
-        Margin="5,0"   ValueChanged="ThicknessSlider_ValueChanged"/>
+            <!-- Слайдеру обязательно Focusable="False" -->
+            <Slider x:Name="ThicknessSlider" Minimum="1" Maximum="30" Value="2" 
+            TickFrequency="1" IsSnapToTickEnabled="True" Margin="5,0" 
+            Focusable="False" ValueChanged="ThicknessSlider_ValueChanged"/>
 
-            <Separator Margin="5,10,5,5" Background="#666"/>
-            <Label Content="ЗАЛИВКА" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" Padding="0"/>
-
-            <Grid Margin="5,2">
-                <Rectangle x:Name="CurrentFillRect" Height="25" Fill="Transparent" Stroke="White" StrokeDashArray="2 2"/>
-                <TextBlock x:Name="FillStatusText" Text="Прозрачно" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" IsHitTestVisible="False"/>
-            </Grid>
-
-            <UniformGrid Columns="2" Margin="5,2">
-                <Button Content="Взять цвет" Click="SetFillColor_Click" ToolTip="Сделать основной цвет цветом заливки" Margin="2"/>
-                <Button Content="❌" Click="ClearFill_Click" ToolTip="Убрать заливку" Margin="2"/>
-            </UniformGrid>
-
-            <Button Content="🪣 Залить выделенное" Margin="5,2" Click="ApplyFillToSelected_Click" Height="30" Background="#446644" Foreground="White"/>
+            <Button Content="❌ Сброс заливки" Click="ClearFill_Click" Margin="5,10" Focusable="False"/>
         </StackPanel>
 
 
@@ -102,11 +114,19 @@
 
 
 
-            <UniformGrid Grid.Row="2" Columns="2" Margin="5">
-                <Button Content="➕ Добавить" Margin="2" Padding="5" Background="#3B7A3B"   Foreground="White" BorderThickness="0" Click="AddLayer_Click" Height="35"/>
+            <UniformGrid Grid.Row="2" Columns="1" Margin="5">
+                <!-- Кнопки порядка -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,5">
+                    <Button Content="🔼" Width="40" Margin="2" Click="MoveLayerUp_Click" Focusable="False"/>
+                    <Button Content="🔽" Width="40" Margin="2" Click="MoveLayerDown_Click" Focusable="False"/>
+                </StackPanel>
 
-                <Button Content="➖ Удалить" Margin="2" Padding="5" Background="#A33636" Foreground="White" BorderThickness="0" Click="DeleteLayer_Click" Height="35"/>
+                <UniformGrid Columns="2">
+                    <Button Content="➕ Добавить" Margin="2" Padding="5" Background="#3B7A3B" Foreground="White" BorderThickness="0" Click="AddLayer_Click" Height="35" Focusable="False"/>
+                    <Button Content="➖ Удалить" Margin="2" Padding="5" Background="#A33636" Foreground="White" BorderThickness="0" Click="DeleteLayer_Click" Height="35" Focusable="False"/>
+                </UniformGrid>
             </UniformGrid>
+
         </Grid>
     </Grid>
 </Window>

@@ -23,7 +23,6 @@ namespace MyPaint.Models.Shapes
             g.RotateTransform(this.Angle);
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-            // Пересчитываем точки относительно центра (0,0)
             var relativePoints = Points.Select(p => new System.Drawing.Point(p.X - cx, p.Y - cy)).ToArray();
 
             if (FillColor.A > 0 && this is PolygonShape)
@@ -63,7 +62,6 @@ namespace MyPaint.Models.Shapes
 
             for (int i = 0; i < Points.Count; i++)
             {
-                // Проверяем, пересекает ли горизонтальный луч из точки P ребро (Points[i], Points[j])
                 if ((Points[i].Y < p.Y && Points[j].Y >= p.Y || Points[j].Y < p.Y && Points[i].Y >= p.Y) &&
                     (Points[i].X + (double)(p.Y - Points[i].Y) / (Points[j].Y - Points[i].Y) * (Points[j].X - Points[i].X) < p.X))
                 {
@@ -77,7 +75,7 @@ namespace MyPaint.Models.Shapes
             for (int i = 0; i < Points.Count; i++)
             {
                 Point p1 = Points[i];
-                Point p2 = Points[(i + 1) % Points.Count]; // Замыкаем последнюю точку на первую
+                Point p2 = Points[(i + 1) % Points.Count]; 
 
                 double lineLength = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
                 if (lineLength == 0) continue;
@@ -143,7 +141,6 @@ namespace MyPaint.Models.Shapes
             int minY = Points.Min(p => p.Y);
             int maxX = Points.Max(p => p.X);
             int maxY = Points.Max(p => p.Y);
-            // Никаких +5 или +10 здесь!
             return new Rectangle(minX, minY, Math.Max(1, maxX - minX), Math.Max(1, maxY - minY));
         }
 
@@ -151,7 +148,7 @@ namespace MyPaint.Models.Shapes
         {
             if (originalPoints == null || originalPoints.Count == 0) return;
 
-            // Находим границы того состояния, которое было в момент нажатия мыши
+            // находим границы того состояния, которое было в момент нажатия мыши
             int minX = originalPoints.Min(p => p.X);
             int minY = originalPoints.Min(p => p.Y);
             int maxX = originalPoints.Max(p => p.X);
@@ -159,7 +156,7 @@ namespace MyPaint.Models.Shapes
             int oldW = Math.Max(1, maxX - minX);
             int oldH = Math.Max(1, maxY - minY);
 
-            // Текущие размеры рамки ресайза
+            // текущие размеры рамки ресайза
             int newLeft = Math.Min(anchor.X, mouse.X);
             int newTop = Math.Min(anchor.Y, mouse.Y);
             int newWidth = Math.Max(1, Math.Abs(mouse.X - anchor.X));
@@ -167,13 +164,13 @@ namespace MyPaint.Models.Shapes
 
             for (int i = 0; i < Points.Count; i++)
             {
-                // Вычисляем процентное положение точки в старой рамке (от 0.0 до 1.0)
+                // процентное положение точки в старой рамке 
                 float pctX = (float)(originalPoints[i].X - minX) / oldW;
                 float pctY = (float)(originalPoints[i].Y - minY) / oldH;
 
-                // Переносим этот процент в новую рамку
+                // переносим этот процент в новую рамку
                 int nx = (int)(newLeft + pctX * newWidth);
-                int ny = (int)(newTop + pctY * newHeight); // Теперь переменная объявлена!
+                int ny = (int)(newTop + pctY * newHeight); 
 
                 Points[i] = new Point(nx, ny);
             }

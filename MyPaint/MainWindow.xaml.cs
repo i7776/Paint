@@ -25,11 +25,10 @@ namespace MyPaint
         private int _resizeIndex = -1;
         private bool _isRotating = false;
         private System.Drawing.Point _resizeAnchorPoint;
-        private List<System.Drawing.Point> _originalPoints; // копия точек до начала ресайза
-        private System.Drawing.Point _originalStart; // Для прямоугольников/эллипсов
+        private List<System.Drawing.Point> _originalPoints; // копия точек до ресайза
+        private System.Drawing.Point _originalStart;
         private System.Drawing.Point _originalEnd;
-
-
+        bool _isEditingFillColor = false;
 
 
         public MainWindow()
@@ -55,12 +54,47 @@ namespace MyPaint
             }
         }
 
-        //удалить
+
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (e.Key == Key.Delete || e.Key == Key.Back)
+            if (_selectedShape != null)
             {
-                Delete_Click(this, new RoutedEventArgs());
+                int dx = 0;
+                int dy = 0;
+                int step = 1;
+                bool isArrowPressed = false;
+
+                switch (e.Key)
+                {
+                    case Key.Up:
+                        dy = -step;
+                        isArrowPressed = true;
+                        break;
+                    case Key.Down:
+                        dy = step;
+                        isArrowPressed = true;
+                        break;
+                    case Key.Left:
+                        dx = -step;
+                        isArrowPressed = true;
+                        break;
+                    case Key.Right:
+                        dx = step;
+                        isArrowPressed = true;
+                        break;
+                    case Key.Delete:
+                    case Key.Back:
+                        Delete_Click(this, new RoutedEventArgs());
+                        e.Handled = true;
+                        return;
+                }
+
+                if (isArrowPressed)
+                {
+                    _selectedShape.Move(dx, dy);
+                    Render();
+                    e.Handled = true;
+                }
             }
         }
 
@@ -89,36 +123,34 @@ namespace MyPaint
             {
                 if (_selectedShape != null) 
                 {
-                    // Внутри Canvas_MouseDown, в блоке if (_selectedShape != null)
                     Rectangle bounds = _selectedShape.GetBounds();
                     int cx = bounds.X + bounds.Width / 2;
                     int cy = bounds.Y + bounds.Height / 2;
                     var center = new System.Drawing.Point(cx, cy);
 
-                    // ВАЖНО: Вращаем точку мыши ОБРАТНО углу фигуры
+                    // вращаем точку мыши обратно углу фигуры!!
                     var localMouse = RotatePoint(drawingPoint, center, -_selectedShape.Angle);
 
-                    // Теперь проверяем попадание, используя localMouse и ОБЫЧНЫЕ bounds (без поворота)
+                    // проверяем попадание через localMouse и bounds 
                     int s = 8;
                     int offset = 20;
 
-                    // Проверка маркера вращения
+                    // проверка маркера вращения
                     Rectangle rotRect = new Rectangle(cx - s / 2, bounds.Y - offset, s, s);
-                    // Так как rotRect мы считали в мировых координатах, а localMouse в локальных, 
-                    // проще проверить маркер вращения так:
+                    //  rotRect в мировых координатах localMouse в локальных 
                     if (new Rectangle(-s / 2, -bounds.Height / 2 - offset, s, s).Contains(localMouse.X - cx, localMouse.Y - cy))
                     {
                         _isRotating = true;
                         return;
                     }
 
-                    // Маркеры ресайза (теперь проверяем относительно localMouse)
+                    // маркеры ресайза
                     System.Drawing.Point[] handles = new System.Drawing.Point[] {
-    new System.Drawing.Point(bounds.X, bounds.Y),
-    new System.Drawing.Point(bounds.Right, bounds.Y),
-    new System.Drawing.Point(bounds.X, bounds.Bottom),
-    new System.Drawing.Point(bounds.Right, bounds.Bottom)
-};
+                        new System.Drawing.Point(bounds.X, bounds.Y),
+                        new System.Drawing.Point(bounds.Right, bounds.Y),
+                        new System.Drawing.Point(bounds.X, bounds.Bottom),
+                        new System.Drawing.Point(bounds.Right, bounds.Bottom)
+                    };
 
                     for (int i = 0; i < handles.Length; i++)
                     {
@@ -127,11 +159,11 @@ namespace MyPaint
                             _isResizing = true;
                             _resizeIndex = i;
 
-                            // Сохраняем исходные данные фигуры ПЕРЕД началом изменения
+                            // сохраняем данные фигуры перез изменением
                             _originalStart = _selectedShape.StartPoint;
                             _originalEnd = _selectedShape.EndPoint;
 
-                            // Назначаем якорь (точка, которая ДОЛЖНА стоять на месте на экране)
+                            // якорь
                             if (i == 0) _resizeAnchorPoint = new System.Drawing.Point(bounds.Right, bounds.Bottom);
                             if (i == 1) _resizeAnchorPoint = new System.Drawing.Point(bounds.X, bounds.Bottom);
                             if (i == 2) _resizeAnchorPoint = new System.Drawing.Point(bounds.Right, bounds.Y);
@@ -156,7 +188,7 @@ namespace MyPaint
                     _currFillColor = _selectedShape.FillColor;
                     _currThickness = _selectedShape.Thickness;
 
-                    // Обновляем визуальные индикаторы в UI
+                    // обновляем визуальные индикаторы
                     CurrentColorRect.Fill = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(_currColor.A, _currColor.R, _currColor.G, _currColor.B));
                     ThicknessSlider.Value = _currThickness;
                     UpdateFillIndicator();
@@ -199,11 +231,11 @@ namespace MyPaint
         {
             if (e.ChangedButton != MouseButton.Left) return;
 
-            _isResizing = false; // Сбрасываем
-            _isRotating = false; // Сбрасываем
+            _isResizing = false; 
+            _isRotating = false; 
             _resizeIndex = -1;
 
-            // если это ломаная/многоугольник — НЕ завершаем рисование по MouseUp
+            // если это ломаная/многоугольник — не завершаем рисование 
             if (_currTool == "Polyline" || _currTool == "Polygon") return;
 
             if (_tempShape != null)
@@ -268,24 +300,19 @@ namespace MyPaint
             {
                 if (_currTool == "Select" && _selectedShape != null)
                 {
-                    // В MainWindow.Logic.cs (или где у вас MouseMove)
-
                     if (_isResizing)
                     {
-                        // 1. Получаем текущие границы и центр ДО изменения
+                        //  границы и центр до изменения
                         Rectangle oldBounds = _selectedShape.GetBounds();
-                        System.Drawing.Point oldCenter = new System.Drawing.Point(
-                            oldBounds.X + oldBounds.Width / 2,
-                            oldBounds.Y + oldBounds.Height / 2
-                        );
+                        System.Drawing.Point oldCenter = new System.Drawing.Point(oldBounds.X + oldBounds.Width / 2, oldBounds.Y + oldBounds.Height / 2);
 
-                        // 2. Находим, где ЯКОРЬ находится на экране СЕЙЧАС (с учетом текущего поворота)
+                        // где якорь находится на экране 
                         System.Drawing.Point worldAnchorBefore = RotatePoint(_resizeAnchorPoint, oldCenter, _selectedShape.Angle);
 
-                        // 3. Переводим мышь из экранных координат в локальные (отменяем поворот)
+                        //переводим мышь из экранных координат в локальные
                         var localMouse = RotatePoint(currentPoint, oldCenter, -_selectedShape.Angle);
 
-                        // 4. ПРИМЕНЯЕМ РЕЗАЙЗ
+                        // ресайз
                         if (_selectedShape is PolygonShape poly)
                         {
                             poly.ResizeByMouse(_resizeAnchorPoint, localMouse, _originalPoints);
@@ -296,54 +323,44 @@ namespace MyPaint
                         }
                         else
                         {
-                            // Для Rectangle/Ellipse: якорь - это один угол, мышь - другой
+                            // якорь это один угол, мышь другой
                             _selectedShape.StartPoint = _resizeAnchorPoint;
                             _selectedShape.EndPoint = localMouse;
                         }
 
-                        // 5. МАГИЯ КОМПЕНСАЦИИ:
-                        // После ресайза центр фигуры изменился. Нам нужно найти новый центр.
+                        // новый центр после ресайза
                         Rectangle newBounds = _selectedShape.GetBounds();
-                        System.Drawing.Point newCenter = new System.Drawing.Point(
-                            newBounds.X + newBounds.Width / 2,
-                            newBounds.Y + newBounds.Height / 2
-                        );
+                        System.Drawing.Point newCenter = new System.Drawing.Point(newBounds.X + newBounds.Width / 2, newBounds.Y + newBounds.Height / 2);
 
-                        // Где наш неподвижный якорь оказался БЫ на экране при новом центре?
                         System.Drawing.Point worldAnchorAfter = RotatePoint(_resizeAnchorPoint, newCenter, _selectedShape.Angle);
 
-                        // Насколько якорь "уплыл" из-за смены центра?
+                        // насколько якорь сдвинулся из-за смены центра
                         int dx = worldAnchorBefore.X - worldAnchorAfter.X;
                         int dy = worldAnchorBefore.Y - worldAnchorAfter.Y;
 
-                        // Двигаем фигуру на это расстояние, чтобы вернуть якорь в исходную точку на экране
+                        // возращаем якорь в исходную точку на экране
                         _selectedShape.Move(dx, dy);
 
                         Render();
                     }
 
-
-
-                    else if (_isRotating) // Добавляем этот блок
+                    else if (_isRotating) 
                     {
                         var bounds = _selectedShape.GetBounds();
-                        // Центр фигуры
                         var center = new System.Drawing.Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
 
-                        // Вычисляем угол в радианах между центром и мышкой
+                        // угол в радианах между центром и мышкой
                         double radians = Math.Atan2(currentPoint.Y - center.Y, currentPoint.X - center.X);
-                        // Переводим в градусы
                         double degrees = radians * (180.0 / Math.PI);
 
-                        // Так как маркер ("антенна") находится сверху, а Atan2 считает от оси X (вправо),
-                        // нам нужно сместить результат на 90 градусов, чтобы 0 был наверху.
+                        // нужно сместить результат на 90 градусов, чтобы 0 был наверху.
                         _selectedShape.Angle = (float)degrees + 90;
 
                         Render();
                     }
                     else
                     {
-                        // Обычное перемещение
+                        // перемещение
                         int dx = currentPoint.X - _lastMousePos.X;
                         int dy = currentPoint.Y - _lastMousePos.Y;
                         _selectedShape.Move(dx, dy);
@@ -358,7 +375,20 @@ namespace MyPaint
             }
         }
 
-        
+        private void CurrentColorRect_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            _isEditingFillColor = false;
+            StrokeColorBorder.BorderBrush = System.Windows.Media.Brushes.Yellow;
+            FillColorBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
+        }
+
+        private void CurrentFillRect_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            _isEditingFillColor = true;
+            FillColorBorder.BorderBrush = System.Windows.Media.Brushes.Yellow;
+            StrokeColorBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
+        }
+
         #endregion
 
         #region Вспомогательное
@@ -366,20 +396,36 @@ namespace MyPaint
         private void Color_Click(object sender, RoutedEventArgs e)
         {
             var button = sender as System.Windows.Controls.Button;
-            if (button != null)
+            if (button == null) return;
+
+            var wpfColor = ((System.Windows.Media.SolidColorBrush)button.Background).Color;
+            System.Drawing.Color newColor = System.Drawing.Color.FromArgb(wpfColor.A, wpfColor.R, wpfColor.G, wpfColor.B);
+
+            if (_isEditingFillColor)
             {
-                var wpfColor = ((System.Windows.Media.SolidColorBrush)button.Background).Color;
-                _currColor = System.Drawing.Color.FromArgb(wpfColor.A, wpfColor.R, wpfColor.G, wpfColor.B);
-
-                CurrentColorRect.Fill = button.Background;
-
-                if (_currTool == "Select" && _selectedShape != null)
+                // меняем только заливку
+                _currFillColor = newColor;
+                if (_selectedShape != null)
                 {
-                    _selectedShape.Color = _currColor; 
-                    Render(); 
+                    _selectedShape.FillColor = newColor;
                 }
             }
+            else
+            {
+                // меняем только контур
+                _currColor = newColor;
+                if (_selectedShape != null)
+                {
+                    _selectedShape.Color = newColor;
+                }
+            }
+
+            UpdateFillIndicator(); 
+            Render();
+            
+            this.Focus();
         }
+
 
 
         // выбор произвольного цвета через системное окно
@@ -389,19 +435,29 @@ namespace MyPaint
             if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 var c = dialog.Color;
-                _currColor = System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
+                System.Drawing.Color newColor = System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
 
-                // обновляем предпросмотр
-                CurrentColorRect.Fill = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromArgb(c.A, c.R, c.G, c.B));
-
-                if (_currTool == "Select" && _selectedShape != null)
+                if (_isEditingFillColor)
                 {
-                    _selectedShape.Color = _currColor;
-                    Render();
+                    _currFillColor = newColor;
+                    if (_selectedShape != null) _selectedShape.FillColor = newColor;
                 }
+                else
+                {
+                    _currColor = newColor;
+                    if (_selectedShape != null) _selectedShape.Color = newColor;
+
+                    // обновляем квадратик основного цвета
+                    CurrentColorRect.Fill = new System.Windows.Media.SolidColorBrush(
+                        System.Windows.Media.Color.FromArgb(c.A, c.R, c.G, c.B));
+                }
+
+                UpdateFillIndicator();
+                Render();
+                this.Focus();
             }
         }
+
 
         private Shape? CreateShape(string type, System.Drawing.Point start)
         {
@@ -528,7 +584,29 @@ namespace MyPaint
                 System.Windows.MessageBox.Show("Сначала выберите фигуру инструментом 'Выделение' (мышка)");
             }
         }
+        
+        private void MoveLayerUp_Click(object sender, RoutedEventArgs e)
+        {
+            if (LayersList.SelectedItem is Layer selectedLayer)
+            {
+                _project.MoveLayerUp(selectedLayer); // реализуй в DrawingProject
+                UpdateLayersList();
+                LayersList.SelectedItem = selectedLayer;
+                Render();
+            }
+        }
 
+        private void MoveLayerDown_Click(object sender, RoutedEventArgs e)
+        {
+            if (LayersList.SelectedItem is Layer selectedLayer)
+            {
+                _project.MoveLayerDown(selectedLayer); // реализуй в DrawingProject
+                UpdateLayersList();
+                LayersList.SelectedItem = selectedLayer;
+                Render();
+            }
+        }
+        
         #endregion
     }
 }
