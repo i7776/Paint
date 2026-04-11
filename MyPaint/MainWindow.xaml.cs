@@ -29,6 +29,7 @@ namespace MyPaint
         private System.Drawing.Point _originalStart;
         private System.Drawing.Point _originalEnd;
         bool _isEditingFillColor = false;
+        private System.Drawing.Point _worldAnchorPoint;
 
 
         public MainWindow()
@@ -156,23 +157,32 @@ namespace MyPaint
                     {
                         if (new Rectangle(handles[i].X - s, handles[i].Y - s, s * 2, s * 2).Contains(localMouse))
                         {
+                            // ... внутри блока if (new Rectangle(handles[i].X - s, handles[i].Y - s, s * 2, s * 2).Contains(localMouse))
                             _isResizing = true;
                             _resizeIndex = i;
 
-                            // сохраняем данные фигуры перез изменением
-                            _originalStart = _selectedShape.StartPoint;
-                            _originalEnd = _selectedShape.EndPoint;
+                            // 1. Берем текущие границы
+                            bounds = _selectedShape.GetBounds();
+                            int x1 = bounds.X;
+                            int y1 = bounds.Y;
+                            int x2 = bounds.Right;
+                            int y2 = bounds.Bottom;
 
-                            // якорь
-                            if (i == 0) _resizeAnchorPoint = new System.Drawing.Point(bounds.Right, bounds.Bottom);
-                            if (i == 1) _resizeAnchorPoint = new System.Drawing.Point(bounds.X, bounds.Bottom);
-                            if (i == 2) _resizeAnchorPoint = new System.Drawing.Point(bounds.Right, bounds.Y);
-                            if (i == 3) _resizeAnchorPoint = new System.Drawing.Point(bounds.X, bounds.Y);
+                            // 2. Определяем локальный якорь (точка, которая будет StartPoint)
+                            if (_resizeIndex == 0) _resizeAnchorPoint = new System.Drawing.Point(x2, y2); // Тянем за TL -> Якорь BR
+                            if (_resizeIndex == 1) _resizeAnchorPoint = new System.Drawing.Point(x1, y2); // Тянем за TR -> Якорь BL
+                            if (_resizeIndex == 2) _resizeAnchorPoint = new System.Drawing.Point(x2, y1); // Тянем за BL -> Якорь TR
+                            if (_resizeIndex == 3) _resizeAnchorPoint = new System.Drawing.Point(x1, y1); // Тянем за BR -> Якорь TL
+
+                            // 3. ЗАПОМИНАЕМ МИРОВУЮ ПОЗИЦИЮ ЯКОРЯ (чтобы он не прыгал)
+                            var currentCenter = new System.Drawing.Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
+                            _worldAnchorPoint = RotatePoint(_resizeAnchorPoint, currentCenter, _selectedShape.Angle);
 
                             if (_selectedShape is PolygonShape pg) _originalPoints = pg.Points.ToList();
                             else if (_selectedShape is PolylineShape pl) _originalPoints = pl.Points.ToList();
 
                             return;
+
                         }
 
 
@@ -302,47 +312,42 @@ namespace MyPaint
                 {
                     if (_isResizing)
                     {
-                        //  границы и центр до изменения
+                        // 1. Текущий центр (до изменений)
                         Rectangle oldBounds = _selectedShape.GetBounds();
                         System.Drawing.Point oldCenter = new System.Drawing.Point(oldBounds.X + oldBounds.Width / 2, oldBounds.Y + oldBounds.Height / 2);
 
-                        // где якорь находится на экране 
-                        System.Drawing.Point worldAnchorBefore = RotatePoint(_resizeAnchorPoint, oldCenter, _selectedShape.Angle);
-
-                        //переводим мышь из экранных координат в локальные
+                        // 2. Переводим мышь в локальные координаты относительно старого центра
                         var localMouse = RotatePoint(currentPoint, oldCenter, -_selectedShape.Angle);
 
-                        // ресайз
+                        // 3. Меняем размеры (устанавливаем новые Start/End)
                         if (_selectedShape is PolygonShape poly)
-                        {
                             poly.ResizeByMouse(_resizeAnchorPoint, localMouse, _originalPoints);
-                        }
                         else if (_selectedShape is PolylineShape line)
-                        {
                             line.ResizeByMouse(_resizeAnchorPoint, localMouse, _originalPoints);
-                        }
                         else
                         {
-                            // якорь это один угол, мышь другой
                             _selectedShape.StartPoint = _resizeAnchorPoint;
                             _selectedShape.EndPoint = localMouse;
                         }
 
-                        // новый центр после ресайза
+                        // 4. КОМПЕНСАЦИЯ ПРЫЖКА
+                        // После изменения координат центр фигуры сместился. 
+                        // Нам нужно найти, где ТЕПЕРЬ оказался наш локальный якорь в мировых координатах.
                         Rectangle newBounds = _selectedShape.GetBounds();
                         System.Drawing.Point newCenter = new System.Drawing.Point(newBounds.X + newBounds.Width / 2, newBounds.Y + newBounds.Height / 2);
+                        System.Drawing.Point currentAnchorPos = RotatePoint(_resizeAnchorPoint, newCenter, _selectedShape.Angle);
 
-                        System.Drawing.Point worldAnchorAfter = RotatePoint(_resizeAnchorPoint, newCenter, _selectedShape.Angle);
+                        // Разница между тем, где якорь ДОЛЖЕН быть (_worldAnchorPoint) и где он СЕЙЧАС (currentAnchorPos)
+                        int dx = _worldAnchorPoint.X - currentAnchorPos.X;
+                        int dy = _worldAnchorPoint.Y - currentAnchorPos.Y;
 
-                        // насколько якорь сдвинулся из-за смены центра
-                        int dx = worldAnchorBefore.X - worldAnchorAfter.X;
-                        int dy = worldAnchorBefore.Y - worldAnchorAfter.Y;
-
-                        // возращаем якорь в исходную точку на экране
+                        // Двигаем всю фигуру, чтобы вернуть якорь на место
                         _selectedShape.Move(dx, dy);
 
                         Render();
                     }
+
+
 
                     else if (_isRotating) 
                     {
@@ -571,20 +576,7 @@ namespace MyPaint
                 FillStatusText.Visibility = Visibility.Collapsed;
             }
         }
-
-        private void ApplyFillToSelected_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selectedShape != null)
-            {
-                _selectedShape.FillColor = _currFillColor;
-                Render(); 
-            }
-            else
-            {
-                System.Windows.MessageBox.Show("Сначала выберите фигуру инструментом 'Выделение' (мышка)");
-            }
-        }
-        
+      
         private void MoveLayerUp_Click(object sender, RoutedEventArgs e)
         {
             if (LayersList.SelectedItem is Layer selectedLayer)
@@ -606,7 +598,7 @@ namespace MyPaint
                 Render();
             }
         }
-        
+
         #endregion
     }
 }

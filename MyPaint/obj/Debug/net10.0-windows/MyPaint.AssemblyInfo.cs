@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MyPaint")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b2b34fbc6e23f06ca429e9c9bb9d30015c64e34b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d1742630e19aa39fd16cd7d6cde933b71bb0a705")]
 [assembly: System.Reflection.AssemblyProductAttribute("MyPaint")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MyPaint")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

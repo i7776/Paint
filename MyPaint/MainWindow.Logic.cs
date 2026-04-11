@@ -98,15 +98,18 @@ namespace MyPaint
 
         private System.Drawing.Point RotatePoint(System.Drawing.Point p, System.Drawing.Point center, float angle)
         {
+            if (angle == 0) return p;
             double rad = angle * Math.PI / 180.0;
             double cos = Math.Cos(rad);
             double sin = Math.Sin(rad);
-            int dx = p.X - center.X;
-            int dy = p.Y - center.Y;
-            return new System.Drawing.Point(
-                (int)(center.X + dx * cos - dy * sin),
-                (int)(center.Y + dx * sin + dy * cos)
-            );
+
+            double dx = p.X - center.X;
+            double dy = p.Y - center.Y;
+
+            int newX = (int)Math.Round(center.X + dx * cos - dy * sin);
+            int newY = (int)Math.Round(center.Y + dx * sin + dy * cos);
+
+            return new System.Drawing.Point(newX, newY);
         }
 
 
