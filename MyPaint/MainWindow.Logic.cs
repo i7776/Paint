@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using MyPaint.Models.Shapes;
 using System.Windows.Media.Imaging;
 
 namespace MyPaint
@@ -10,8 +11,10 @@ namespace MyPaint
     {
         private void Render()
         {
-            int width = (int)Math.Max(CanvasImage.ActualWidth, 800);
-            int height = (int)Math.Max(CanvasImage.ActualHeight, 600);
+            if (_project == null || CanvasImage == null) return;
+
+            int width = 1000;
+            int height = 800;
 
             using (Bitmap bmp = new Bitmap(width, height))
             {
@@ -19,82 +22,93 @@ namespace MyPaint
                 {
                     if (_project.Layers.Count == 0)
                     {
-                        g.Clear(Color.DarkGray);
-                        using (Font font = new Font("Arial", 16))
-                        {
-                            g.DrawString("Создайте слой, чтобы начать рисовать", font, Brushes.White, new PointF(width / 4, height / 2));
-                        }
+                        g.Clear(System.Drawing.Color.DarkGray);
                     }
                     else
                     {
-                        g.Clear(Color.White);
-                        //красивыве линии - не лесенкой
+                        g.Clear(System.Drawing.Color.White);
                         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-                        // рисуем проект 
+                        //рисуем все слои проекта
                         _project.Draw(g);
 
+                        //рисуем временную фигуру
                         if (_project.ActiveLayer != null && _project.ActiveLayer.IsVisible)
                         {
                             _tempShape?.Draw(g);
                         }
 
-                        if (_currTool == "Select" && _selectedShape != null)
+                        //рисуем рамку выделения
+                        if (_currTool == "Select")
                         {
-                            Rectangle bounds = _selectedShape.GetBounds();
-                            var state = g.Save();
-
-                            // центр для вращения рамки
-                            int cx = bounds.X + bounds.Width / 2;
-                            int cy = bounds.Y + bounds.Height / 2;
-
-                            g.TranslateTransform(cx, cy);
-                            g.RotateTransform(_selectedShape.Angle);
-
-                            // рисуем относительно центра
-                            int halfW = bounds.Width / 2;
-                            int halfH = bounds.Height / 2;
-                            Rectangle localRect = new Rectangle(-halfW, -halfH, bounds.Width, bounds.Height);
-
-                            using (Pen framePen = new Pen(Color.Blue, 1))
+                            foreach (var shape in _selectedShapes)
                             {
-                                framePen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
-                                g.DrawRectangle(framePen, localRect);
+                                DrawSelectionFrame(g, shape);
                             }
 
-                            // квадратики ресайза
-                            int s = 6;
-                            Point[] handles = new Point[] {
-                                new Point(localRect.Left, localRect.Top),     
-                                new Point(localRect.Right, localRect.Top),    
-                                new Point(localRect.Left, localRect.Bottom),  
-                                new Point(localRect.Right, localRect.Bottom)  
-                            };
-
-                            foreach (var hp in handles)
+                            // 4. Рисуем саму «растягивающуюся» рамку выбора (лассо)
+                            if (_isSelectingBox)
                             {
-                                g.FillRectangle(Brushes.White, hp.X - s / 2, hp.Y - s / 2, s, s);
-                                g.DrawRectangle(Pens.DodgerBlue, hp.X - s / 2, hp.Y - s / 2, s, s);
+                                using (var p = new System.Drawing.Pen(System.Drawing.Color.DeepSkyBlue, 1))
+                                {
+                                    p.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                                    g.DrawRectangle(p, _selectionRect);
+                                }
                             }
-
-                            // антенна для вращения
-                            int d = 8;
-                            int rotX = 0; // центр по X
-                            int rotY = -halfH - 20;
-                            g.DrawLine(Pens.DodgerBlue, 0, -halfH, rotX, rotY);
-                            g.FillEllipse(Brushes.White, rotX - d / 2, rotY - d / 2, d, d);
-                            g.DrawEllipse(Pens.DodgerBlue, rotX - d / 2, rotY - d / 2, d, d);
-
-                            g.Restore(state);
                         }
-
                     }
                 }
 
-                // вывод на экран
                 CanvasImage.Source = BitmapToImageSource(bmp);
             }
         }
+
+        
+        private void DrawSelectionFrame(Graphics g, Shape shape)
+        {
+            if (shape == null) return;
+            Rectangle bounds = shape.GetBounds();
+            var state = g.Save();
+
+            int cx = bounds.X + bounds.Width / 2;
+            int cy = bounds.Y + bounds.Height / 2;
+
+            g.TranslateTransform(cx, cy);
+            g.RotateTransform(shape.Angle);
+
+            int halfW = bounds.Width / 2;
+            int halfH = bounds.Height / 2;
+            Rectangle localRect = new Rectangle(-halfW, -halfH, bounds.Width, bounds.Height);
+
+            using (System.Drawing.Pen framePen = new System.Drawing.Pen(System.Drawing.Color.Blue, 1))
+            {
+                framePen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                g.DrawRectangle(framePen, localRect);
+            }
+
+            int s = 6;
+            System.Drawing.Point[] handles = {
+                new System.Drawing.Point(localRect.Left, localRect.Top),
+                new System.Drawing.Point(localRect.Right, localRect.Top),
+                new System.Drawing.Point(localRect.Left, localRect.Bottom),
+                new System.Drawing.Point(localRect.Right, localRect.Bottom)
+            };
+
+            foreach (var hp in handles)
+            {
+                g.FillRectangle(System.Drawing.Brushes.White, hp.X - s / 2, hp.Y - s / 2, s, s);
+                g.DrawRectangle(System.Drawing.Pens.DodgerBlue, hp.X - s / 2, hp.Y - s / 2, s, s);
+            }
+
+            int d = 8;
+            int rotY = -halfH - 20;
+            g.DrawLine(System.Drawing.Pens.DodgerBlue, 0, -halfH, 0, rotY);
+            g.FillEllipse(System.Drawing.Brushes.White, -d / 2, rotY - d / 2, d, d);
+            g.DrawEllipse(System.Drawing.Pens.DodgerBlue, -d / 2, rotY - d / 2, d, d);
+
+            g.Restore(state);
+        }
+
 
         private System.Drawing.Point RotatePoint(System.Drawing.Point p, System.Drawing.Point center, float angle)
         {
@@ -132,6 +146,7 @@ namespace MyPaint
 
         private void UpdateLayersList()
         {
+            if (_project == null || LayersList == null) return;
             var currentActive = _project.ActiveLayer;
 
             // обновляем список

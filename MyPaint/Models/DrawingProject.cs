@@ -19,24 +19,26 @@ namespace MyPaint.Models
 
             ActiveLayer = firstLayer;
         }
-        
+
         public void Draw(Graphics g)
         {
-            foreach (var layer in Layers)
+            for (int i = Layers.Count - 1; i >= 0; i--)
             {
-                if (layer.IsVisible)
+                if (Layers[i].IsVisible)
                 {
-                    layer.Draw(g);
+                    Layers[i].Draw(g);
                 }
             }
         }
 
+
         public Shape GetShapeAt(Point p)
         {
-            for (int i = Layers.Count - 1; i >= 0; i--) //от верхнего слоя к нижнему
+            for (int i = 0; i < Layers.Count; i++)
             {
-                if (!Layers[i].IsVisible) continue;
-                for (int j = Layers[i].Shapes.Count - 1; j >= 0; j--) //от верхней фигуры к нижней
+                if (!Layers[i].IsVisible || Layers[i].IsLocked) continue;
+
+                for (int j = Layers[i].Shapes.Count - 1; j >= 0; j--)
                 {
                     if (Layers[i].Shapes[j].ContainPoint(p))
                         return Layers[i].Shapes[j];
@@ -44,6 +46,7 @@ namespace MyPaint.Models
             }
             return null;
         }
+
 
 
         public void RemoveShape(Shape shape)

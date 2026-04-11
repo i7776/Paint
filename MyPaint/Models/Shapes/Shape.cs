@@ -24,10 +24,9 @@ namespace MyPaint.Models.Shapes
             Rectangle b = GetBounds();
             Point center = new Point(b.X + b.Width / 2, b.Y + b.Height / 2);
 
-            double rad = -angle * Math.PI / 180.0; // Обратный угол
+            double rad = -angle * Math.PI / 180.0; //обратный угол
             double cos = Math.Cos(rad);
             double sin = Math.Sin(rad);
-
             double dx = p.X - center.X;
             double dy = p.Y - center.Y;
 
@@ -36,8 +35,6 @@ namespace MyPaint.Models.Shapes
                 (int)(center.Y + dx * sin + dy * cos)
             );
         }
-
-
 
     }
 }
