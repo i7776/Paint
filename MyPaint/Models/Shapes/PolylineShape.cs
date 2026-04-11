@@ -63,58 +63,20 @@ namespace MyPaint.Models.Shapes
         {
             if (Points.Count < 2) return false;
 
+            //разворачиваем мышку
+            Point lp = RotatePointBack(p, this.Angle);
+
             using (var path = new System.Drawing.Drawing2D.GraphicsPath())
             {
                 path.AddLines(Points.ToArray());
-                if (FillColor.A > 0)
+                //добавляем запас для клика 
+                using (var pen = new Pen(Color, Thickness + 10))
                 {
-                    if (path.IsVisible(p)) return true;
-                }
-
-                using (var pen = new Pen(Color, Thickness + 5))
-                {
-                    if (path.IsOutlineVisible(p, pen)) return true;
+                    return path.IsOutlineVisible(lp, pen);
                 }
             }
-            return false;
         }
 
-
-
-        public override void Resize(float scale)
-        {
-            if (Points.Count == 0) return;
-
-            float avgX = 0, avgY = 0;
-            foreach (var p in Points) { avgX += p.X; avgY += p.Y; }
-            Point center = new Point((int)avgX / Points.Count, (int)avgY / Points.Count);
-
-            for (int i = 0; i < Points.Count; i++)
-            {
-                int newX = center.X + (int)((Points[i].X - center.X) * scale);
-                int newY = center.Y + (int)((Points[i].Y - center.Y) * scale);
-                Points[i] = new Point(newX, newY);
-            }
-        }
-
-
-        public override void Rotate(float angle, Point center)
-        {
-            double rad = angle * Math.PI / 180.0;
-            double cos = Math.Cos(rad);
-            double sin = Math.Sin(rad);
-
-            for (int i = 0; i < Points.Count; i++)
-            {
-                int dx = Points[i].X - center.X;
-                int dy = Points[i].Y - center.Y;
-
-                int newX = (int)(center.X + dx * cos - dy * sin);
-                int newY = (int)(center.Y + dx * sin + dy * cos);
-
-                Points[i] = new Point(newX, newY);
-            }
-        }
 
         public override Rectangle GetBounds()
         {

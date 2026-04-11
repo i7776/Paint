@@ -80,27 +80,7 @@ namespace MyPaint.Models
             StartPoint = new Point(StartPoint.X + x, StartPoint.Y + y);
             EndPoint = new Point(EndPoint.X + x, EndPoint.Y + y);
         }
-        public override void Resize(float scale)
-        {
-            int centerX = (StartPoint.X + EndPoint.X) / 2;
-            int centerY = (StartPoint.Y + EndPoint.Y) / 2;
-
-            int halfwidth = Math.Abs(EndPoint.X - StartPoint.X) / 2;
-            int halfheight = Math.Abs(EndPoint.Y - StartPoint.Y)/2;
-
-            int newHalfWidth = Math.Max(1, (int)(halfwidth * scale));  
-            int newHalfHeight = Math.Max(1, (int)(halfheight * scale)); 
-
-            StartPoint = new Point(centerX - newHalfWidth, centerY - newHalfHeight);
-            EndPoint = new Point(centerX +  newHalfWidth, centerY + newHalfHeight);
-
-        }
-
-        public override void Rotate(float angle, Point center)
-        {
-            this.Angle += angle;
-        }
-
+             
         public override Rectangle GetBounds()
         {
             int x = Math.Min(StartPoint.X, EndPoint.X);

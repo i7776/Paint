@@ -81,25 +81,12 @@ namespace MyPaint.Models
 
         }
 
-
         public override void Move(int x, int y)
         {
             StartPoint = new Point(StartPoint.X + x, StartPoint.Y + y);
             EndPoint = new Point(EndPoint.X + x, EndPoint.Y + y);
         }
         
-        public override void Resize(float scale)
-        {
-            int newX = StartPoint.X + (int)((EndPoint.X - StartPoint.X) * scale);
-            int newY = StartPoint.Y + (int)((EndPoint.Y - StartPoint.Y) * scale);
-            EndPoint = new Point(newX, newY);
-        }
-
-        public override void Rotate(float angle, Point center)
-        {
-            this.Angle += angle;
-        }
-
         public override Rectangle GetBounds()
         {
             int x = Math.Min(StartPoint.X, EndPoint.X);

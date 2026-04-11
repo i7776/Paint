@@ -33,25 +33,18 @@ namespace MyPaint.Models
 
         public Shape GetShapeAt(Point p)
         {
-            for (int i = Layers.Count - 1; i >= 0; i--)
+            for (int i = Layers.Count - 1; i >= 0; i--) //от верхнего слоя к нижнему
             {
-                var layer = Layers[i];
-
-                if (!layer.IsVisible || layer.IsLocked)
+                if (!Layers[i].IsVisible) continue;
+                for (int j = Layers[i].Shapes.Count - 1; j >= 0; j--) //от верхней фигуры к нижней
                 {
-                    continue;
-                }
-
-                for (int j = layer.Shapes.Count - 1; j >= 0; j--)
-                {
-                    if (layer.Shapes[j].ContainPoint(p))
-                    {
-                        return layer.Shapes[j];
-                    }
+                    if (Layers[i].Shapes[j].ContainPoint(p))
+                        return Layers[i].Shapes[j];
                 }
             }
             return null;
         }
+
 
         public void RemoveShape(Shape shape)
         {

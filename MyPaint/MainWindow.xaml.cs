@@ -157,24 +157,23 @@ namespace MyPaint
                     {
                         if (new Rectangle(handles[i].X - s, handles[i].Y - s, s * 2, s * 2).Contains(localMouse))
                         {
-                            // ... внутри блока if (new Rectangle(handles[i].X - s, handles[i].Y - s, s * 2, s * 2).Contains(localMouse))
                             _isResizing = true;
                             _resizeIndex = i;
 
-                            // 1. Берем текущие границы
+                            // берем текущие границы
                             bounds = _selectedShape.GetBounds();
                             int x1 = bounds.X;
                             int y1 = bounds.Y;
                             int x2 = bounds.Right;
                             int y2 = bounds.Bottom;
 
-                            // 2. Определяем локальный якорь (точка, которая будет StartPoint)
-                            if (_resizeIndex == 0) _resizeAnchorPoint = new System.Drawing.Point(x2, y2); // Тянем за TL -> Якорь BR
-                            if (_resizeIndex == 1) _resizeAnchorPoint = new System.Drawing.Point(x1, y2); // Тянем за TR -> Якорь BL
-                            if (_resizeIndex == 2) _resizeAnchorPoint = new System.Drawing.Point(x2, y1); // Тянем за BL -> Якорь TR
-                            if (_resizeIndex == 3) _resizeAnchorPoint = new System.Drawing.Point(x1, y1); // Тянем за BR -> Якорь TL
+                            // локальный якорь 
+                            if (_resizeIndex == 0) _resizeAnchorPoint = new System.Drawing.Point(x2, y2); 
+                            if (_resizeIndex == 1) _resizeAnchorPoint = new System.Drawing.Point(x1, y2); 
+                            if (_resizeIndex == 2) _resizeAnchorPoint = new System.Drawing.Point(x2, y1); 
+                            if (_resizeIndex == 3) _resizeAnchorPoint = new System.Drawing.Point(x1, y1); 
 
-                            // 3. ЗАПОМИНАЕМ МИРОВУЮ ПОЗИЦИЮ ЯКОРЯ (чтобы он не прыгал)
+                            // занимаем позицию мирового якоря
                             var currentCenter = new System.Drawing.Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
                             _worldAnchorPoint = RotatePoint(_resizeAnchorPoint, currentCenter, _selectedShape.Angle);
 
@@ -184,7 +183,6 @@ namespace MyPaint
                             return;
 
                         }
-
 
                     }
 
@@ -312,14 +310,14 @@ namespace MyPaint
                 {
                     if (_isResizing)
                     {
-                        // 1. Текущий центр (до изменений)
+                        // текущий центр
                         Rectangle oldBounds = _selectedShape.GetBounds();
                         System.Drawing.Point oldCenter = new System.Drawing.Point(oldBounds.X + oldBounds.Width / 2, oldBounds.Y + oldBounds.Height / 2);
 
-                        // 2. Переводим мышь в локальные координаты относительно старого центра
+                        //  мышь в локальные координаты относ. старого центра
                         var localMouse = RotatePoint(currentPoint, oldCenter, -_selectedShape.Angle);
 
-                        // 3. Меняем размеры (устанавливаем новые Start/End)
+                        // меняем размеры
                         if (_selectedShape is PolygonShape poly)
                             poly.ResizeByMouse(_resizeAnchorPoint, localMouse, _originalPoints);
                         else if (_selectedShape is PolylineShape line)
@@ -330,23 +328,19 @@ namespace MyPaint
                             _selectedShape.EndPoint = localMouse;
                         }
 
-                        // 4. КОМПЕНСАЦИЯ ПРЫЖКА
-                        // После изменения координат центр фигуры сместился. 
-                        // Нам нужно найти, где ТЕПЕРЬ оказался наш локальный якорь в мировых координатах.
+                        // после изменения координат центр фигуры сместился, локальный якорь в мировых координатах
                         Rectangle newBounds = _selectedShape.GetBounds();
                         System.Drawing.Point newCenter = new System.Drawing.Point(newBounds.X + newBounds.Width / 2, newBounds.Y + newBounds.Height / 2);
                         System.Drawing.Point currentAnchorPos = RotatePoint(_resizeAnchorPoint, newCenter, _selectedShape.Angle);
 
-                        // Разница между тем, где якорь ДОЛЖЕН быть (_worldAnchorPoint) и где он СЕЙЧАС (currentAnchorPos)
                         int dx = _worldAnchorPoint.X - currentAnchorPos.X;
                         int dy = _worldAnchorPoint.Y - currentAnchorPos.Y;
 
-                        // Двигаем всю фигуру, чтобы вернуть якорь на место
+                        // двигаем всю фигуру: вернуть якорь на место
                         _selectedShape.Move(dx, dy);
 
                         Render();
                     }
-
 
 
                     else if (_isRotating) 
@@ -548,12 +542,6 @@ namespace MyPaint
                 UpdateLayersList();
                 Render();
             }
-        }
-
-        private void SetFillColor_Click(object sender, RoutedEventArgs e)
-        {
-            _currFillColor = _currColor; 
-            UpdateFillIndicator();
         }
 
         private void ClearFill_Click(object sender, RoutedEventArgs e)
