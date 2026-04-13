@@ -96,6 +96,5 @@ namespace MyPaint.Models
             return new Rectangle(x, y, Math.Max(w, 1), Math.Max(h, 1));
         }
 
-
     }
 }

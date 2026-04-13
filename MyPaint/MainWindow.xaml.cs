@@ -37,13 +37,14 @@ namespace MyPaint
         private UndoRedoManager _undoRedoManager = new UndoRedoManager();
         private List<Shape> _shapesBeforeTransform = new List<Shape>();
         private List<Shape> _clipboard = new List<Shape>(); // CtrlC / CtrlV
+        private Type _selectedPluginType;
 
 
         private Shape? PrimarySelected => _selectedShapes.Count > 0 ? _selectedShapes[_selectedShapes.Count - 1] : null;
 
         public MainWindow()
         {
-            _project = new DrawingProject();
+            _project = DrawingProject.CreateNew(); 
             _selectedShapes = new List<Shape>();
 
             InitializeComponent();
@@ -244,14 +245,14 @@ namespace MyPaint
                 {
                     if (isCtrl)
                     {
-                        // если зажат Ctrl — инвертируем выбор конкретной фигуры
+                        // если зажат сtrl — выбор конкретной фигуры
                         if (_selectedShapes.Contains(hitShape)) _selectedShapes.Remove(hitShape);
                         else _selectedShapes.Add(hitShape);
                     }
                     else
                     {
-                        // если кликнули по фигуре без Ctrl
-                        // если она уже была в группе — не сбрасываем (чтобы можно было тащить группу)
+                        // если кликнули по фигуре без сtrl
+                        // если она уже была в группе — не сбрасываем
                         // если она новая — выбираем только её
                         if (!_selectedShapes.Contains(hitShape))
                         {
@@ -261,13 +262,13 @@ namespace MyPaint
                     }
 
                     // используем новую выбранную фигуру для обновления интерфейса
-                    var current = _selectedShapes.Count > 0 ? _selectedShapes[_selectedShapes.Count - 1] : null;
-                    if (current != null)
+                    var curr = _selectedShapes.Count > 0 ? _selectedShapes[_selectedShapes.Count - 1] : null;
+                    if (curr != null)
                     {
-                        // обновляем текущие цвета в палитре, чтобы они соответствовали выбранной фигуре
-                        _currColor = current.Color;
-                        _currFillColor = current.FillColor;
-                        _currThickness = current.Thickness;
+                        // обновляем текущие цвета в палитре чтобы они соответствовали  фигуре
+                        _currColor = curr.Color;
+                        _currFillColor = curr.FillColor;
+                        _currThickness = curr.Thickness;
 
                         // обновляем визуальные индикаторы
                         CurrentColorRect.Fill = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(_currColor.A, _currColor.R, _currColor.G, _currColor.B));
@@ -335,7 +336,7 @@ namespace MyPaint
                         if (!layer.IsVisible || layer.IsLocked) continue;
                         foreach (var shape in layer.Shapes)
                         {
-                            // Если границы фигуры пересекаются с рамкой выбора
+                            // сли границы фигуры пересекаются с рамкой выбора
                             if (_selectionRect.IntersectsWith(shape.GetBounds()))
                             {
                                 if (!_selectedShapes.Contains(shape)) _selectedShapes.Add(shape);
@@ -376,7 +377,7 @@ namespace MyPaint
         {
             if (_isDrawingPoly && _tempShape != null)
             {
-                // удаляем последнюю точку, которая просто следовала за курсором
+                // удаляем последнюю точку которая следовала за курсором
                 if (_tempShape is PolylineShape poly && poly.Points.Count > 1)
                 {
                     poly.Points.RemoveAt(poly.Points.Count - 1);
@@ -587,17 +588,26 @@ namespace MyPaint
         }
 
 
-        private Shape? CreateShape(string type, System.Drawing.Point start)
+        private Shape CreateShape(string type, System.Drawing.Point start)
         {
-            Shape? s = type switch
+            Shape s = null;
+
+            if (type == "Plugin" && _selectedPluginType != null)
             {
-                "Line" => new LineShape(),
-                "Rect" => new RectangleShape(),
-                "Ellipse" => new EllipseShape(),
-                "Polyline" => new PolylineShape(), 
-                "Polygon" => new PolygonShape(),   
-                _ => null
-            };
+                s = (Shape)Activator.CreateInstance(_selectedPluginType);
+            }
+            else
+            {
+                s = type switch
+                {
+                    "Line" => new LineShape(),
+                    "Rect" => new RectangleShape(),
+                    "Ellipse" => new EllipseShape(),
+                    "Polyline" => new PolylineShape(),
+                    "Polygon" => new PolygonShape(),
+                    _ => null
+                };
+            }
 
             if (s != null)
             {
@@ -651,7 +661,7 @@ namespace MyPaint
             //удаляем каждую выбранную фигуру из проекта
             if (_selectedShapes.Count > 0)
             {
-                // создаем команду, передавая копию списка выбранных фигур
+                // создаем команду передавая копию списка выбранных фигур
                 var command = new RemoveShapesCommand(_project, new List<Shape>(_selectedShapes));
 
                 _undoRedoManager.Execute(command);
@@ -762,8 +772,6 @@ namespace MyPaint
             Render();
             System.Windows.MessageBox.Show($"Фигуры перенесены на слой '{targetLayer.Name}'. Можно отменить через Ctrl+Z.");
         }
-
-
 
         #endregion
     }

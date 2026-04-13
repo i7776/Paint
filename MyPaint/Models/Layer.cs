@@ -13,13 +13,17 @@ namespace MyPaint.Models
         public bool IsLocked { get; set; }
         public List<Shape> Shapes { get; set; }
 
-        public Layer(int id, string name)
+        public Layer()
+        {
+            Shapes = new List<Shape>();
+            IsVisible = true;
+            IsLocked = false;
+        }
+
+        public Layer(int id, string name) : this()
         {
             Id = id;
             Name = name;
-            IsVisible = true;
-            IsLocked = false;
-            Shapes = new List<Shape>();
         }
 
         public void Draw(Graphics g)

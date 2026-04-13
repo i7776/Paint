@@ -18,7 +18,16 @@ namespace MyPaint.Commands
             _updateUI = updateUI;
         }
 
-        public void Execute() { _project.Layers.Add(_layer); _project.ActiveLayer = _layer; _updateUI(); }
-        public void Undo() { _project.Layers.Remove(_layer); _updateUI(); }
+        public void Execute() 
+        { 
+            _project.Layers.Add(_layer); 
+            _project.ActiveLayer = _layer; 
+            _updateUI(); 
+        }
+        public void Undo() 
+        { 
+            _project.Layers.Remove(_layer); 
+            _updateUI(); 
+        }
     }
 }

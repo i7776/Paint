@@ -13,11 +13,15 @@ namespace MyPaint.Models
         public DrawingProject()
         {
             Layers = new List<Layer>();
+        }
 
+        public static DrawingProject CreateNew()
+        {
+            var project = new DrawingProject();
             var firstLayer = new Layer(0, "Слой 1");
-            Layers.Add(firstLayer);
-
-            ActiveLayer = firstLayer;
+            project.Layers.Add(firstLayer);
+            project.ActiveLayer = firstLayer;
+            return project;
         }
 
         public void Draw(Graphics g)
@@ -46,47 +50,5 @@ namespace MyPaint.Models
             }
             return null;
         }
-
-
-
-        public void RemoveShape(Shape shape)
-        {
-            if (shape == null) return;
-
-            foreach (var layer in Layers)
-            {
-                if (layer.IsLocked || !layer.IsVisible)
-                {
-                    continue;
-                }
-
-                if (layer.Shapes.Contains(shape))
-                {
-                    layer.Shapes.Remove(shape);
-                    break;
-                }
-            }
-        }
-
-        public void MoveLayerUp(Layer layer)
-        {
-            int index = Layers.IndexOf(layer);
-            if (index > 0) 
-            {
-                Layers.RemoveAt(index);
-                Layers.Insert(index - 1, layer);
-            }
-        }
-
-        public void MoveLayerDown(Layer layer)
-        {
-            int index = Layers.IndexOf(layer);
-            if (index < Layers.Count - 1)
-            {
-                Layers.RemoveAt(index);
-                Layers.Insert(index + 1, layer);
-            }
-        }
-
     }
 }

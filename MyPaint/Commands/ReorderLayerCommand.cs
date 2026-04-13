@@ -22,8 +22,14 @@ namespace MyPaint.Commands
             _updateUI = updateUI;
         }
 
-        public void Execute() { Move(_oldIndex, _newIndex); }
-        public void Undo() { Move(_newIndex, _oldIndex); }
+        public void Execute() 
+        { 
+            Move(_oldIndex, _newIndex); 
+        }
+        public void Undo() 
+        { 
+            Move(_newIndex, _oldIndex); 
+        }
 
         private void Move(int from, int to)
         {

@@ -1,8 +1,12 @@
-﻿using System;
+﻿using MyPaint.Commands;
+using MyPaint.Models.Shapes;
+using MyPaint.Services;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
-using MyPaint.Models.Shapes;
+using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace MyPaint
@@ -46,7 +50,7 @@ namespace MyPaint
                                 DrawSelectionFrame(g, shape);
                             }
 
-                            // 4. Рисуем саму «растягивающуюся» рамку выбора (лассо)
+                            // рисуем саму рамку выбора 
                             if (_isSelectingBox)
                             {
                                 using (var p = new System.Drawing.Pen(System.Drawing.Color.DeepSkyBlue, 1))
@@ -155,6 +159,121 @@ namespace MyPaint
 
             // возвращаем выделение в списке
             LayersList.SelectedItem = currentActive;
+        }
+
+        private void LoadPlugin(string dllPath)
+        {
+            try
+            {
+                Assembly assembly = Assembly.LoadFrom(dllPath);
+                foreach (Type type in assembly.GetTypes())
+                {
+                    if (typeof(Shape).IsAssignableFrom(type) && !type.IsAbstract)
+                    {
+                        string shapeName = type.Name.Replace("Shape", "");
+                        AddPluginButton(shapeName, type);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Ошибка загрузки плагина: {ex.Message}");
+            }
+        }
+
+        private void AddPluginButton(string name, Type shapeType)
+        {
+            System.Windows.Controls.Button btn = new System.Windows.Controls.Button
+            {
+                Content = "🧩 " + name,
+                ToolTip = name,
+                Tag = shapeType,
+                Height = 40,
+                Margin = new System.Windows.Thickness(5),
+                Focusable = false
+            };
+            btn.Click += PluginTool_Click;
+            ToolPanel.Children.Add(btn);
+        }
+
+        private void PluginTool_Click(object sender, RoutedEventArgs e)
+        {
+            var btn = sender as System.Windows.Controls.Button;
+            if (btn == null) return;
+
+            _currTool = "Plugin";
+            _selectedPluginType = (Type)btn.Tag;
+            _selectedShapes.Clear();
+            Render();
+        }
+
+
+        private void SaveProject_Click(object sender, RoutedEventArgs e)
+        {
+            Microsoft.Win32.SaveFileDialog saveFileDialog = new Microsoft.Win32.SaveFileDialog();
+            saveFileDialog.Filter = "MyPaint Project (*.json)|*.json";
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                ProjectSerializer.SaveToFile(saveFileDialog.FileName, _project);
+                System.Windows.MessageBox.Show("Проект сохранен!");
+            }
+        }
+
+        private void LoadProject_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Microsoft.Win32.OpenFileDialog openFileDialog = new Microsoft.Win32.OpenFileDialog();
+                openFileDialog.Filter = "MyPaint Project (*.json)|*.json";
+
+                if (openFileDialog.ShowDialog() == true)
+                {
+                    var loadedProject = ProjectSerializer.LoadFromFile(openFileDialog.FileName);
+
+                    if (loadedProject != null && loadedProject.Layers != null)
+                    {
+                        // очищаем старое состояние
+                        _selectedShapes.Clear();
+                        _tempShape = null;
+
+                        // устанавливаем новый проект
+                        _project = loadedProject;
+
+                        // считаем фигуры для проверки
+                        int totalShapes = _project.Layers.Sum(l => l.Shapes?.Count ?? 0);
+
+                        if (_project.ActiveLayer == null && _project.Layers.Count > 0)
+                            _project.ActiveLayer = _project.Layers[0];
+
+                        UpdateLayersList();
+                        if (LayersList.Items.Count > 0) LayersList.SelectedIndex = 0;
+
+                        Render();
+
+                        System.Windows.MessageBox.Show($"Успех! Слоев: {_project.Layers.Count}, фигур: {totalShapes}");
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show("Файл поврежден или не содержит данных проекта.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show("Ошибка: " + ex.Message + "\nУбедитесь, что плагины загружены ПЕРЕД открытием файла.");
+            }
+        }
+
+        private void LoadPlugin_Click(object sender, RoutedEventArgs e)
+        {
+            Microsoft.Win32.OpenFileDialog openFileDialog = new Microsoft.Win32.OpenFileDialog();
+            openFileDialog.Filter = "Плагины (*.dll)|*.dll";
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                LoadPlugin(openFileDialog.FileName);
+            }
         }
     }
 }

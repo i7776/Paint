@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="MyPaint/MyPaint.csproj" />
+  <Project Path="TrapezoidPlugin/TrapezoidPlugin.csproj" Id="0e10815c-eeaf-4992-84e7-7d24485a3738" />
 </Solution>

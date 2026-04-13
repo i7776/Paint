@@ -5,158 +5,129 @@
         KeyDown="Window_KeyDown"
         Background="#333">
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="60"/>
-            <!-- Панель инструментов -->
-            <ColumnDefinition Width="*"/>
-            <!-- Холст -->
-            <ColumnDefinition Width="200"/>
-            <!-- Слои -->
-        </Grid.ColumnDefinitions>
+    <DockPanel>
+        <!-- ДОБАВЛЯЕМ ТОЛЬКО ЭТО МЕНЮ СВЕРХУ -->
+        <Menu DockPanel.Dock="Top" Background="#EEE">
+            <MenuItem Header="Файл">
+                <MenuItem Header="Открыть проект" Click="LoadProject_Click"/>
+                <MenuItem Header="Сохранить проект" Click="SaveProject_Click"/>
+                <Separator/>
+                <MenuItem Header="Загрузить плагин (.dll)" Click="LoadPlugin_Click"/>
+            </MenuItem>
+        </Menu>
 
-        <!-- ЛЕВАЯ ПАНЕЛЬ -->
-        <StackPanel Grid.Column="0" Background="#444">
-            <!-- Добавляем Focusable="False" всем кнопкам инструментов -->
-            <Button Content="🖱️" Height="40" Margin="5" Click="Tool_Click" Tag="Select" Focusable="False" ToolTip="Выделение"/>
-            <Button Content="📏" Height="40" Margin="5" Click="Tool_Click" Tag="Line" Focusable="False" ToolTip="Линия"/>
-            <Button Content="〰️" Height="40" Margin="5" Click="Tool_Click" Tag="Polyline" Focusable="False" ToolTip="Ломаная"/>
-            <Button Content="⬜" Height="40" Margin="5" Click="Tool_Click" Tag="Rect" Focusable="False" ToolTip="Прямоугольник"/>
-            <Button Content="⚪" Height="40" Margin="5" Click="Tool_Click" Tag="Ellipse" Focusable="False" ToolTip="Эллипс"/>
-            <Button Content="📐" Height="40" Margin="5" Click="Tool_Click" Tag="Polygon" Focusable="False" ToolTip="Многоугольник"/>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="60"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="200"/>
+            </Grid.ColumnDefinitions>
 
-            <Separator Margin="5" Background="#666"/>
-            <Button Content="🗑️" Height="40" Margin="5" Click="Delete_Click" Focusable="False" ToolTip="Удалить (Del)"/>
+            <StackPanel x:Name="ToolPanel" Grid.Column="0" Background="#444">
+                <Button Content="🖱️" Height="40" Margin="5" Click="Tool_Click" Tag="Select" Focusable="False" ToolTip="Выделение"/>
+                <Button Content="📏" Height="40" Margin="5" Click="Tool_Click" Tag="Line" Focusable="False" ToolTip="Линия"/>
+                <Button Content="〰️" Height="40" Margin="5" Click="Tool_Click" Tag="Polyline" Focusable="False" ToolTip="Ломаная"/>
+                <Button Content="⬜" Height="40" Margin="5" Click="Tool_Click" Tag="Rect" Focusable="False" ToolTip="Прямоугольник"/>
+                <Button Content="⚪" Height="40" Margin="5" Click="Tool_Click" Tag="Ellipse" Focusable="False" ToolTip="Эллипс"/>
+                <Button Content="📐" Height="40" Margin="5" Click="Tool_Click" Tag="Polygon" Focusable="False" ToolTip="Многоугольник"/>
 
-            <Label Content="Цвет: " FontWeight="Bold" Foreground="White"/>
-            <UniformGrid Columns="4" x:Name="ColorPalette">
-                <!-- Кнопкам палитры тоже Focusable="False" -->
-                <Button Background="Black" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
-                <Button Background="Red" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
-                <Button Background="Green" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
-                <Button Background="Blue" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
-                <Button Background="Yellow" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
-                <Button Background="Orange" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
-                <Button Background="White" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
-                <Button Background="Gray" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
-            </UniformGrid>
+                <Separator Margin="5" Background="#666"/>
+                <Button Content="🗑️" Height="40" Margin="5" Click="Delete_Click" Focusable="False" ToolTip="Удалить (Del)"/>
 
-            <Button Content="Другой ..." Margin="0,5,0,0" Click="MoreColors_Click" Focusable="False"/>
-
-            <!-- СЕКЦИЯ ВЫБОРА: ЧТО МЫ КРАСИМ? -->
-            <Label Content="Режим:" Foreground="White" Margin="0,10,0,0"/>
-            <Grid Margin="5">
-                <StackPanel>
-                    <!-- Рамка вокруг индикатора будет показывать, что выбрано -->
-                    <Border x:Name="StrokeColorBorder" BorderBrush="Yellow" BorderThickness="2" Margin="2">
-                        <Rectangle x:Name="CurrentColorRect" Height="20" Fill="Black" MouseDown="CurrentColorRect_MouseDown" Cursor="Hand"/>
-                    </Border>
-                    <TextBlock Text="Контур" Foreground="Gray" FontSize="10" HorizontalAlignment="Center"/>
-
-                    <Border x:Name="FillColorBorder" BorderBrush="Transparent" BorderThickness="2" Margin="2">
-                        <Grid MouseDown="CurrentFillRect_MouseDown" Cursor="Hand">
-                            <Rectangle x:Name="CurrentFillRect" Height="20" Fill="Transparent" Stroke="White" StrokeDashArray="2 2"/>
-                            <TextBlock x:Name="FillStatusText" Text="Прозрачно" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" IsHitTestVisible="False"/>
-                        </Grid>
-                    </Border>
-                    <TextBlock Text="Заливка" Foreground="Gray" FontSize="10" HorizontalAlignment="Center"/>
-                </StackPanel>
-            </Grid>
-
-            <Separator Margin="5" Background="#666"/>
-            <Label Content="Толщ:" Foreground="White" HorizontalAlignment="Center" Padding="0"/>
-            <TextBlock Text="{Binding ElementName=ThicknessSlider, Path=Value}" 
-           Foreground="Yellow" 
-           HorizontalAlignment="Center" 
-           FontWeight="Bold" 
-           FontSize="14"/>
-
-            <Slider x:Name="ThicknessSlider" 
-        Minimum="1" 
-        Maximum="30" 
-        Value="2" 
-        TickFrequency="1" 
-        IsSnapToTickEnabled="True" 
-        Margin="5,5" 
-        Focusable="False" 
-        ValueChanged="ThicknessSlider_ValueChanged"/>
-
-            <Button Content="❌ Сброс заливки" Click="ClearFill_Click" Margin="5,10" Focusable="False"/>
-        </StackPanel>
-
-
-
-
-        <!-- ЦЕНТРАЛЬНЫЙ ХОЛСТ -->
-        <Border Grid.Column="1" Background="Gray" Margin="10" ClipToBounds="True">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <Image x:Name="CanvasImage"
-               Stretch="None"
-               HorizontalAlignment="Left" 
-               VerticalAlignment="Top"
-               MouseDown="Canvas_MouseDown"
-               MouseMove="Canvas_MouseMove"
-               MouseUp="Canvas_MouseUp"
-               MouseRightButtonDown="Canvas_MouseRightButtonDown">
-                    <!-- Добавим контекстное меню для переноса между слоями -->
-                    <Image.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="Перенести на активный слой" Click="MoveToActiveLayer_Click"/>
-                        </ContextMenu>
-                    </Image.ContextMenu>
-                </Image>
-            </ScrollViewer>
-        </Border>
-
-        <!-- ПРАВАЯ ПАНЕЛЬ (СЛОИ) -->
-        <Grid Grid.Column="2" Background="#444">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-
-            <Label Content="СЛОИ" Foreground="White" HorizontalAlignment="Center" FontWeight="Bold" Margin="5"/>
-
-            <ListBox Name="LayersList" SelectionChanged="LayersList_SelectionChanged">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal">
-                            <CheckBox IsChecked="{Binding IsVisible}" Click="LayerCheckBox_Click" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Name}" Margin="5,0" VerticalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                                                <Setter Property="FontWeight" Value="Bold" />
-                                                <Setter Property="Foreground" Value="Blue" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-
-
-
-
-
-            <UniformGrid Grid.Row="2" Columns="1" Margin="5">
-                <!-- Кнопки порядка -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,5">
-                    <Button Content="🔼" Width="40" Margin="2" Click="MoveLayerUp_Click" Focusable="False"/>
-                    <Button Content="🔽" Width="40" Margin="2" Click="MoveLayerDown_Click" Focusable="False"/>
-                </StackPanel>
-
-                <UniformGrid Columns="2">
-                    <Button Content="➕ Добавить" Margin="2" Padding="5" Background="#3B7A3B" Foreground="White" BorderThickness="0" Click="AddLayer_Click" Height="35" Focusable="False"/>
-                    <Button Content="➖ Удалить" Margin="2" Padding="5" Background="#A33636" Foreground="White" BorderThickness="0" Click="DeleteLayer_Click" Height="35" Focusable="False"/>
+                <Label Content="Цвет: " FontWeight="Bold" Foreground="White"/>
+                <UniformGrid Columns="4" x:Name="ColorPalette">
+                    <Button Background="Black" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                    <Button Background="Red" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                    <Button Background="Green" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                    <Button Background="Blue" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                    <Button Background="Yellow" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                    <Button Background="Orange" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                    <Button Background="White" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
+                    <Button Background="Gray" Click="Color_Click" Height="25" Margin="2" Focusable="False"/>
                 </UniformGrid>
-            </UniformGrid>
 
+                <Button Content="Другой ..." Margin="0,5,0,0" Click="MoreColors_Click" Focusable="False"/>
+
+                <Label Content="Режим:" Foreground="White" Margin="0,10,0,0"/>
+                <Grid Margin="5">
+                    <StackPanel>
+                        <Border x:Name="StrokeColorBorder" BorderBrush="Yellow" BorderThickness="2" Margin="2">
+                            <Rectangle x:Name="CurrentColorRect" Height="20" Fill="Black" MouseDown="CurrentColorRect_MouseDown" Cursor="Hand"/>
+                        </Border>
+                        <TextBlock Text="Контур" Foreground="Gray" FontSize="10" HorizontalAlignment="Center"/>
+
+                        <Border x:Name="FillColorBorder" BorderBrush="Transparent" BorderThickness="2" Margin="2">
+                            <Grid MouseDown="CurrentFillRect_MouseDown" Cursor="Hand">
+                                <Rectangle x:Name="CurrentFillRect" Height="20" Fill="Transparent" Stroke="White" StrokeDashArray="2 2"/>
+                                <TextBlock x:Name="FillStatusText" Text="Прозрачно" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" IsHitTestVisible="False"/>
+                            </Grid>
+                        </Border>
+                        <TextBlock Text="Заливка" Foreground="Gray" FontSize="10" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+
+                <Separator Margin="5" Background="#666"/>
+                <Label Content="Толщ:" Foreground="White" HorizontalAlignment="Center" Padding="0"/>
+                <TextBlock Text="{Binding ElementName=ThicknessSlider, Path=Value}" Foreground="Yellow" HorizontalAlignment="Center" FontWeight="Bold" FontSize="14"/>
+
+                <Slider x:Name="ThicknessSlider" Minimum="1" Maximum="30" Value="2" TickFrequency="1" IsSnapToTickEnabled="True" Margin="5,5" Focusable="False" ValueChanged="ThicknessSlider_ValueChanged"/>
+                <Button Content="❌ Сброс" Click="ClearFill_Click" Margin="5,10" Focusable="False"/>
+            </StackPanel>
+
+            <Border Grid.Column="1" Background="Gray" Margin="10" ClipToBounds="True">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                    <Image x:Name="CanvasImage" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top"
+                           MouseDown="Canvas_MouseDown" MouseMove="Canvas_MouseMove" MouseUp="Canvas_MouseUp"
+                           MouseRightButtonDown="Canvas_MouseRightButtonDown">
+                        <Image.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Перенести на активный слой" Click="MoveToActiveLayer_Click"/>
+                            </ContextMenu>
+                        </Image.ContextMenu>
+                    </Image>
+                </ScrollViewer>
+            </Border>
+
+            <Grid Grid.Column="2" Background="#444">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Label Content="СЛОИ" Foreground="White" HorizontalAlignment="Center" FontWeight="Bold" Margin="5"/>
+                <ListBox Name="LayersList" SelectionChanged="LayersList_SelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox IsChecked="{Binding IsVisible}" Click="LayerCheckBox_Click" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Name}" Margin="5,0" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                                                    <Setter Property="FontWeight" Value="Bold" />
+                                                    <Setter Property="Foreground" Value="Blue" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <UniformGrid Grid.Row="2" Columns="1" Margin="5">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,5">
+                        <Button Content="🔼" Width="40" Margin="2" Click="MoveLayerUp_Click" Focusable="False"/>
+                        <Button Content="🔽" Width="40" Margin="2" Click="MoveLayerDown_Click" Focusable="False"/>
+                    </StackPanel>
+                    <UniformGrid Columns="2">
+                        <Button Content="➕" Margin="2" Background="#3B7A3B" Foreground="White" Click="AddLayer_Click" Height="35" Focusable="False"/>
+                        <Button Content="➖" Margin="2" Background="#A33636" Foreground="White" Click="DeleteLayer_Click" Height="35" Focusable="False"/>
+                    </UniformGrid>
+                </UniformGrid>
+            </Grid>
         </Grid>
-    </Grid>
+    </DockPanel>
 </Window>
