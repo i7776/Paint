@@ -1,4 +1,5 @@
-﻿using MyPaint.Models;
+﻿using MyPaint.Commands;
+using MyPaint.Models;
 using MyPaint.Models.Shapes;
 using System;
 using System.Collections.Generic;
@@ -33,7 +34,11 @@ namespace MyPaint
         private bool _isSelectingBox = false;
         private System.Drawing.Point _selectionStart;
         private System.Drawing.Rectangle _selectionRect;
-        
+        private UndoRedoManager _undoRedoManager = new UndoRedoManager();
+        private List<Shape> _shapesBeforeTransform = new List<Shape>();
+        private List<Shape> _clipboard = new List<Shape>(); // CtrlC / CtrlV
+
+
         private Shape? PrimarySelected => _selectedShapes.Count > 0 ? _selectedShapes[_selectedShapes.Count - 1] : null;
 
         public MainWindow()
@@ -63,6 +68,42 @@ namespace MyPaint
 
         private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
+            //сtrlZ
+            if (Keyboard.IsKeyDown(Key.LeftCtrl) && e.Key == Key.Z)
+            {
+                _undoRedoManager.Undo();
+                UpdateLayersList();
+                Render();
+            }
+            //сtrlY
+            if (Keyboard.IsKeyDown(Key.LeftCtrl) && e.Key == Key.Y)
+            {
+                _undoRedoManager.Redo();
+                UpdateLayersList();
+                Render();
+            }
+            //сtrlC
+            if (Keyboard.IsKeyDown(Key.LeftCtrl) && e.Key == Key.C)
+            {
+                _clipboard = _selectedShapes.Select(s => s.Clone()).ToList();
+            }
+            //сtrlV
+            if (Keyboard.IsKeyDown(Key.LeftCtrl) && e.Key == Key.V)
+            {
+                if (_clipboard.Count > 0)
+                {
+                    _selectedShapes.Clear();
+                    foreach (var s in _clipboard)
+                    {
+                        var copy = s.Clone();
+                        copy.Move(10, 10);
+                        _undoRedoManager.Execute(new AddShapeCommand(_project.ActiveLayer, copy));
+                        _selectedShapes.Add(copy);
+                    }
+                    Render();
+                }
+            }
+
             if (_selectedShapes.Count > 0)
             {
                 int dx = 0;
@@ -246,6 +287,8 @@ namespace MyPaint
                     _selectionStart = drawingPoint;
                     _selectionRect = new System.Drawing.Rectangle(drawingPoint.X, drawingPoint.Y, 0, 0);
                 }
+
+                _shapesBeforeTransform = _selectedShapes.Select(s => s.Clone()).ToList();
             }
             else if (_currTool == "Polyline" || _currTool == "Polygon")
             {
@@ -303,23 +346,27 @@ namespace MyPaint
                     _selectionRect = new System.Drawing.Rectangle(0, 0, 0, 0);
                 }
 
+                if (_isResizing || _isRotating || (_selectedShapes.Count > 0 && _currTool == "Select"))
+                {
+                    var news = _selectedShapes.Select(s => s.Clone()).ToList();
+                    // сравнение состояний
+                    if (_shapesBeforeTransform.Count > 0 && _shapesBeforeTransform.Count == news.Count)
+                    {
+                        _undoRedoManager.Execute(new TransformCommand(_selectedShapes, _shapesBeforeTransform, news));
+                    }
+                }
+
+                if (_tempShape != null && !(_currTool == "Polyline" || _currTool == "Polygon"))
+                {
+                    _undoRedoManager.Execute(new AddShapeCommand(_project.ActiveLayer, _tempShape));
+                    _tempShape = null;
+                }
+
                 _isResizing = false;
                 _isRotating = false;
                 _resizeIndex = -1;
-
-                // если это ломаная/многоугольник — не завершаем рисование (ждем ПКМ)
-                if (_currTool == "Polyline" || _currTool == "Polygon")
-                {
-                    Render();
-                    return;
-                }
-
-                if (_tempShape != null)
-                {
-                    _project.ActiveLayer?.Shapes.Add(_tempShape);
-                    _tempShape = null;
-                }
                 Render();
+                
             }
         }
 
@@ -465,34 +512,34 @@ namespace MyPaint
             var wpfColor = ((System.Windows.Media.SolidColorBrush)button.Background).Color;
             System.Drawing.Color newColor = System.Drawing.Color.FromArgb(wpfColor.A, wpfColor.R, wpfColor.G, wpfColor.B);
 
-            if (_isEditingFillColor)
+            if (_selectedShapes.Count > 0)
             {
-                _currFillColor = newColor;
-                // меняем заливку у всех выбранных
+                var olds = _selectedShapes.Select(s => s.Clone()).ToList();
+
                 foreach (var shape in _selectedShapes)
                 {
-                    shape.FillColor = newColor;
+                    if (_isEditingFillColor) shape.FillColor = newColor;
+                    else shape.Color = newColor;
                 }
+
+                var news = _selectedShapes.Select(s => s.Clone()).ToList();
+                _undoRedoManager.Execute(new PropertyChangeCommand(_selectedShapes, olds, news));
             }
             else
             {
-                _currColor = newColor;
-                // меняем контур у всех выбранных
-                foreach (var shape in _selectedShapes)
+                // Если ничего не выбрано — просто меняем текущий цвет кисти (это не в Undo)
+                if (_isEditingFillColor) _currFillColor = newColor;
+                else
                 {
-                    shape.Color = newColor;
+                    _currColor = newColor;
+                    CurrentColorRect.Fill = new System.Windows.Media.SolidColorBrush(wpfColor);
                 }
-
-                // обновляем квадратик основного цвета (UI)
-                CurrentColorRect.Fill = new System.Windows.Media.SolidColorBrush(wpfColor);
             }
 
             UpdateFillIndicator();
             Render();
             this.Focus();
         }
-
-
 
 
         // выбор произвольного цвета через системное окно
@@ -504,25 +551,27 @@ namespace MyPaint
                 var c = dialog.Color;
                 System.Drawing.Color newColor = System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
 
-                if (_isEditingFillColor)
+                if (_selectedShapes.Count > 0)
                 {
-                    _currFillColor = newColor;
-                    // применяем заливку ко всем выбранным фигурам
+                    var olds = _selectedShapes.Select(s => s.Clone()).ToList();
+
                     foreach (var shape in _selectedShapes)
                     {
-                        shape.FillColor = newColor;
+                        if (_isEditingFillColor) shape.FillColor = newColor;
+                        else shape.Color = newColor;
                     }
+
+                    var news = _selectedShapes.Select(s => s.Clone()).ToList();
+                    _undoRedoManager.Execute(new PropertyChangeCommand(_selectedShapes, olds, news));
                 }
                 else
                 {
-                    _currColor = newColor;
-                    // применяем цвет контура ко всем выбранным фигурам
-                    foreach (var shape in _selectedShapes)
-                    {
-                        shape.Color = newColor;
-                    }
+                    if (_isEditingFillColor) _currFillColor = newColor;
+                    else _currColor = newColor;
+                }
 
-                    // обновляем квадратик основного цвета
+                if (!_isEditingFillColor)
+                {
                     CurrentColorRect.Fill = new System.Windows.Media.SolidColorBrush(
                         System.Windows.Media.Color.FromArgb(c.A, c.R, c.G, c.B));
                 }
@@ -568,38 +617,40 @@ namespace MyPaint
         {
             // создаем новый слой
             var newLayer = new Layer(_project.Layers.Count, $"Слой {_project.Layers.Count + 1}");
-            _project.Layers.Add(newLayer);
-             
-            _project.ActiveLayer = newLayer;
-
-            UpdateLayersList();
+            _undoRedoManager.Execute(new AddLayerCommand(_project, newLayer, () => {
+                UpdateLayersList();
+                Render();
+            }));
         }
 
         private void ThicknessSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             _currThickness = (int)e.NewValue;
 
-            if (_currTool == "Select")
+            if (_selectedShapes.Count > 0)
             {
-                // применяем толщину ко всем выбранным фигурам в списке
+                var olds = _selectedShapes.Select(s => s.Clone()).ToList();
                 foreach (var shape in _selectedShapes)
                 {
                     shape.Thickness = _currThickness;
                 }
-                Render();
+                var news = _selectedShapes.Select(s => s.Clone()).ToList();
+
+                _undoRedoManager.Execute(new PropertyChangeCommand(_selectedShapes, olds, news));
             }
+            Render();
         }
+
 
         private void Delete_Click(object sender, RoutedEventArgs e)
         {
             //удаляем каждую выбранную фигуру из проекта
             if (_selectedShapes.Count > 0)
             {
-                foreach (var shape in _selectedShapes)
-                {
-                    _project.RemoveShape(shape);
-                }
+                // создаем команду, передавая копию списка выбранных фигур
+                var command = new RemoveShapesCommand(_project, new List<Shape>(_selectedShapes));
 
+                _undoRedoManager.Execute(command);
                 _selectedShapes.Clear();
                 Render();
             }
@@ -617,22 +668,31 @@ namespace MyPaint
                     return;
                 }
 
-                _project.Layers.Remove(selectedLayer);
-
-                if (_project.ActiveLayer == selectedLayer)
-                {
-                    _project.ActiveLayer = _project.Layers.Count > 0 ? _project.Layers[0] : null;
-                }
-
-                UpdateLayersList();
-                Render();
+                _undoRedoManager.Execute(new RemoveLayerCommand(_project, selectedLayer, () => {
+                    UpdateLayersList();
+                    Render();
+                }));
             }
         }
 
         private void ClearFill_Click(object sender, RoutedEventArgs e)
         {
             _currFillColor = System.Drawing.Color.Transparent;
+            if (_selectedShapes.Count > 0)
+            {
+                var olds = _selectedShapes.Select(s => s.Clone()).ToList();
+
+                foreach (var shape in _selectedShapes)
+                {
+                    shape.FillColor = System.Drawing.Color.Transparent;
+                }
+
+                var news = _selectedShapes.Select(s => s.Clone()).ToList();
+
+                _undoRedoManager.Execute(new PropertyChangeCommand(_selectedShapes, olds, news));
+            }
             UpdateFillIndicator();
+            Render();
         }
 
         private void UpdateFillIndicator()
@@ -649,15 +709,20 @@ namespace MyPaint
                 FillStatusText.Visibility = Visibility.Collapsed;
             }
         }
-      
+
         private void MoveLayerUp_Click(object sender, RoutedEventArgs e)
         {
             if (LayersList.SelectedItem is Layer selectedLayer)
             {
-                _project.MoveLayerUp(selectedLayer); // реализуй в DrawingProject
-                UpdateLayersList();
-                LayersList.SelectedItem = selectedLayer;
-                Render();
+                int idx = _project.Layers.IndexOf(selectedLayer);
+                if (idx > 0)
+                {
+                    _undoRedoManager.Execute(new ReorderLayerCommand(_project, selectedLayer, -1, () => {
+                        UpdateLayersList();
+                        LayersList.SelectedItem = selectedLayer;
+                        Render();
+                    }));
+                }
             }
         }
 
@@ -665,10 +730,15 @@ namespace MyPaint
         {
             if (LayersList.SelectedItem is Layer selectedLayer)
             {
-                _project.MoveLayerDown(selectedLayer); // реализуй в DrawingProject
-                UpdateLayersList();
-                LayersList.SelectedItem = selectedLayer;
-                Render();
+                int idx = _project.Layers.IndexOf(selectedLayer);
+                if (idx < _project.Layers.Count - 1)
+                {
+                    _undoRedoManager.Execute(new ReorderLayerCommand(_project, selectedLayer, 1, () => {
+                        UpdateLayersList();
+                        LayersList.SelectedItem = selectedLayer;
+                        Render();
+                    }));
+                }
             }
         }
 
@@ -681,34 +751,15 @@ namespace MyPaint
             }
 
             var targetLayer = _project.ActiveLayer;
-            int movedCount = 0;
-            var shapesToMove = new List<Shape>(_selectedShapes);
+            var command = new MoveShapesToLayerCommand(_project, new List<Shape>(_selectedShapes), targetLayer);
 
-            foreach (var shape in shapesToMove)
-            {
-                Layer? oldLayer = null;
-                foreach (var layer in _project.Layers)
-                {
-                    if (layer.Shapes.Contains(shape)) { oldLayer = layer; break; }
-                }
-
-                if (oldLayer != null && oldLayer != targetLayer)
-                {
-                    oldLayer.Shapes.Remove(shape);
-                    targetLayer.Shapes.Add(shape);
-                    movedCount++;
-                }
-            }
-
-            if (movedCount > 0)
-            {
-                _selectedShapes.Clear();
-
-                Render();
-
-                System.Windows.MessageBox.Show($"Готово! {movedCount} фиг. перенесены на '{targetLayer.Name}'");
-            }
+            _undoRedoManager.Execute(command);
+            _selectedShapes.Clear();
+            Render();
+            System.Windows.MessageBox.Show($"Фигуры перенесены на слой '{targetLayer.Name}'. Можно отменить через Ctrl+Z.");
         }
+
+
 
         #endregion
     }

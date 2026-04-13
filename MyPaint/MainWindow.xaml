@@ -65,12 +65,21 @@
 
             <Separator Margin="5" Background="#666"/>
             <Label Content="Толщ:" Foreground="White" HorizontalAlignment="Center" Padding="0"/>
-            <TextBlock Text="{Binding ElementName=ThicknessSlider, Path=Value}" Foreground="White" HorizontalAlignment="Center" FontWeight="Bold"/>
+            <TextBlock Text="{Binding ElementName=ThicknessSlider, Path=Value}" 
+           Foreground="Yellow" 
+           HorizontalAlignment="Center" 
+           FontWeight="Bold" 
+           FontSize="14"/>
 
-            <!-- Слайдеру обязательно Focusable="False" -->
-            <Slider x:Name="ThicknessSlider" Minimum="1" Maximum="30" Value="2" 
-            TickFrequency="1" IsSnapToTickEnabled="True" Margin="5,0" 
-            Focusable="False" ValueChanged="ThicknessSlider_ValueChanged"/>
+            <Slider x:Name="ThicknessSlider" 
+        Minimum="1" 
+        Maximum="30" 
+        Value="2" 
+        TickFrequency="1" 
+        IsSnapToTickEnabled="True" 
+        Margin="5,5" 
+        Focusable="False" 
+        ValueChanged="ThicknessSlider_ValueChanged"/>
 
             <Button Content="❌ Сброс заливки" Click="ClearFill_Click" Margin="5,10" Focusable="False"/>
         </StackPanel>
