@@ -387,7 +387,11 @@ namespace MyPaint
                 }
 
                 // добавляем в активный слой
-                _project.ActiveLayer?.Shapes.Add(_tempShape);
+                if (_project.ActiveLayer != null)
+                {
+                    _undoRedoManager.Execute(new AddShapeCommand(_project.ActiveLayer, _tempShape));
+                }
+
 
                 _tempShape = null;
                 _isDrawingPoly = false;
